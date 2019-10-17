@@ -1,38 +1,25 @@
 {
-    "name": "shadowsocks",
-    "description": "a tunnel proxy that help you get through firewalls",
-    "keywords": [
-        "shadowsocks",
-        "proxy",
-        "socks5"
-    ],
-    "author": "clowwindy",
-    "version": "1.5.3",
-    "licenses": [
-        {
-            "type": "MIT",
-            "url": "https://raw.github.com/clowwindy/shadowsocks-nodejs/master/LICENSE"
-        }
-    ],
-    "engines": {
-        "node": ">=0.10.0"
-    },
-    "directories": {
-        "lib": "./lib/shadowsocks"
-    },
-    "main": "./src/server.js",
-    "bin": {
-        "sslocal": "./bin/sslocal",
-        "ssserver": "./bin/ssserver"
-    },
-    "scripts": {
-        "serve": "node ./src/server",
-        "local": "node ./src/local"
-    },
-    "homepage": "https://github.com/clowwindy/shadowsocks-nodejs",
-    "bugs": "https://github.com/clowwindy/shadowsocks-nodejs/issues",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/clowwindy/shadowsocks-nodejs.git"
-    }
+  "name": "shadowsocks",
+  "description": "a tunnel proxy that help you get through firewalls",
+  "keywords": [
+    "shadowsocks",
+    "proxy",
+    "socks5"
+  ],
+  "author": "clowwindy",
+  "version": "1.5.3",
+  "license": "MIT",
+  "main": "./src/server.js",
+  "bin": {
+    "sslocal": "./bin/sslocal",
+    "ssserver": "./bin/ssserver"
+  },
+  "scripts": {
+    "serve": "node ./src/server",
+    "local": "node ./src/local"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qieru/ss-js"
+  }
 }
