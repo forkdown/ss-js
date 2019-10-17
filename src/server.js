@@ -8,38 +8,60 @@ utils = require("./utils");
 inet = require("./inet");
 Encryptor = require("./encrypt").Encryptor;
 
+const configFileName = "config.json";
+
+/**
+ * 查找配置文件的准确路径
+ */
+function findConfigPath(configPath) {
+    //先查根目录
+    if (fs.existsSync(configPath)) {
+        return configPath;
+    }
+    //在查跟当前代码平级的目录
+    configPath = path.resolve(__dirname, "config.json");
+    if (fs.existsSync(configPath)) {
+        return configPath;
+    }
+    //再查上级目录
+    configPath = path.resolve(__dirname, "../config.json");
+    if (!fs.existsSync(configPath)) {
+        return configPath;
+    }
+    utils.error('There is no config.json found');
+    process.exit(1);
+}
+
+function checkConfigFile(configPath) {
+    if (!configPath) {
+        return {};
+    }
+    utils.info('loading config from ' + configPath);
+    let configContent = fs.readFileSync(configPath);
+    try {
+        return JSON.parse(configContent);
+    } catch (e) {
+        utils.error('found an error in config.json: ' + e.message);
+        process.exit(1);
+    }
+}
+
 function main() {
-    let METHOD, SERVER, a_server_ip, config, configContent, configFromArgs, configPath,
-        connections, e, k, key, port, portPassword, servers, timeout, v, _results;
+    let configPath = findConfigPath(configFileName);
+    let configFromArgs = utils.parseArgs(true);
+
+    let METHOD, SERVER, a_server_ip,
+        connections, k, key, port, portPassword, servers, timeout, v, _results;
 
     console.log(utils.version);
-    configFromArgs = utils.parseArgs(true);
-    configPath = 'config.json';
-    if (configFromArgs.config_file) {
-        configPath = configFromArgs.config_file;
+    if (configFromArgs['config_file']) {
+        configPath = configFromArgs['config_file'];
     }
-    if (!fs.existsSync(configPath)) {
-        configPath = path.resolve(__dirname, "config.json");
-        if (!fs.existsSync(configPath)) {
-            configPath = path.resolve(__dirname, "../../config.json");
-            if (!fs.existsSync(configPath)) {
-                configPath = null;
-            }
-        }
-    }
-    if (configPath) {
-        utils.info('loading config from ' + configPath);
-        configContent = fs.readFileSync(configPath);
-        try {
-            config = JSON.parse(configContent);
-        } catch (_error) {
-            e = _error;
-            utils.error('found an error in config.json: ' + e.message);
-            process.exit(1);
-        }
-    } else {
-        config = {};
-    }
+
+    let config = checkConfigFile(configPath);
+    //////////
+
+
     for (k in configFromArgs) {
         v = configFromArgs[k];
         config[k] = v;
@@ -317,7 +339,7 @@ function main() {
         })());
     }
     return _results;
-};
+}
 
 main();
 
