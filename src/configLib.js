@@ -70,7 +70,7 @@ function checkConfig(config) {
 
     if (config.server === '127.0.0.1' || config.server === 'localhost') {
         log.warn("Server is set to " + config.server + ", maybe it's not correct");
-        log.warn("Notice server will listen at " + config.server + ":" + config.server_port);
+        log.warn("Notice server will listen at " + config.server + ":" + config['server_port']);
     }
     if ((config.method || '').toLowerCase() === 'rc4') {
         return log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
@@ -115,6 +115,20 @@ function parseArgs(isServer = false) {
     return config;
 }
 
+function transformToPortPassword(config) {
+    if (config['port_password']) {
+        if (config['server_port'] || config['password']) {
+            log.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
+        }
+    } else {
+        config['port_password'] = {};
+        config['port_password'][config['server_port'].toString()] = config['password'];
+        delete config['server_port'];
+        delete config['password'];
+    }
+    return config;
+}
+
 /**
  * 重要函数
  */
@@ -127,6 +141,7 @@ function getConfig(configFileName, isServer) {
     let config = checkConfigFile(configPath);
     Object.assign(config, configFromArgs);
     checkConfig(config);
+    config = transformToPortPassword(config);
     afterProcess(config);
     return config;
 }

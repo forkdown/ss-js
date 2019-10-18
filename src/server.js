@@ -8,7 +8,7 @@ const Encryptor = require("./encrypt").Encryptor;
 
 function main() {
     /////////////////////
-    let a_server_ip, connections, servers, _results;
+    let a_server_ip, servers, _results;
     //////////
 
     console.log(utils.version);
@@ -18,29 +18,15 @@ function main() {
 
     let timeout = Math.floor(config.timeout * 1000) || 300000;
     let portPassword = config['port_password'];
-    let port = config['server_port'];
-    let key = config['password'];
     let METHOD = config['method'];
     let SERVER = config['server'];
 
-    if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
-        utils.warn('config.json not found, you have to specify all config in commandline');
-        process.exit(1);
-    }
-
     ///////////////////
-    connections = 0;
-    if (portPassword) {
-        if (port || key) {
-            utils.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
-        }
-    } else {
-        portPassword = {};
-        portPassword[port.toString()] = key;
-    }
+    let connections = 0;
+
     _results = [];
-    for (port in portPassword) {
-        key = portPassword[port];
+    for (let port in portPassword) {
+        let key = portPassword[port];
         servers = SERVER;
         if (!(servers instanceof Array)) {
             servers = [servers];

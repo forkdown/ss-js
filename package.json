@@ -15,7 +15,7 @@
         "ssserver": "./bin/ss-server"
     },
     "scripts": {
-        "serve": "node ./src/server",
+        "server": "node ./src/server",
         "local": "node ./src/local"
     },
     "repository": {
