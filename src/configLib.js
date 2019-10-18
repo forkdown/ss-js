@@ -5,6 +5,31 @@ const log = require("./log");
 
 const configFileName = "config.json";
 
+function printLocalHelp() {
+    console.log("\nCommand: ss-local\n\n" +
+        "  -h, --help            show this help message and exit\n" +
+        "  -b LOCAL_ADDR         local binding address, default is 127.0.0.1\n" +
+        "  -l LOCAL_PORT         local port");
+    console.log("\n" +
+        "  -s SERVER_ADDR        server address\n" +
+        "  -p SERVER_PORT        server port\n" +
+        "  -k PASSWORD           password\n" +
+        "  -m METHOD             encryption method, for example, aes-256-cfb\n" +
+        "  -t TIMEOUT            timeout in seconds\n" +
+        "  -c CONFIG             path to config file");
+}
+
+function printServerHelp() {
+    console.log("\nCommand: ss-server\n\n" +
+        "  -h, --help            show this help message and exit\n" +
+        "  -s SERVER_ADDR        server address\n" +
+        "  -p SERVER_PORT        server port\n" +
+        "  -k PASSWORD           password\n" +
+        "  -m METHOD             encryption method, for example, aes-256-cfb\n" +
+        "  -t TIMEOUT            timeout in seconds\n" +
+        "  -c CONFIG             path to config file");
+}
+
 function findConfigPath(configPath) {
     //先查根目录
     if (fs.existsSync(configPath)) {
@@ -53,9 +78,47 @@ function checkConfig(config) {
     }
 }
 
+function parseArgs(isServer = false) {
+    let argv = process.argv;
+    let definition = {
+        '-l': 'local_port',
+        '-p': 'server_port',
+        '-s': 'server',
+        '-k': 'password',
+        '-c': 'config_file',
+        '-m': 'method',
+        '-b': 'local_address',
+        '-t': 'timeout'
+    };
+    let config = {};
+    let nextIsValue = false;
+    let lastKey = null;
+
+    argv.forEach(item => {
+        if (nextIsValue) {
+            config[lastKey] = item;
+            nextIsValue = false;
+        } else if (definition[item]) {
+            lastKey = definition[item];
+            nextIsValue = true;
+        } else if ('-v' === item) {
+            config['verbose'] = true;
+        } else if (item.indexOf('-') === 0) {
+            if (isServer) {
+                printServerHelp();
+            } else {
+                printLocalHelp();
+            }
+            process.exit(2);
+        }
+
+    });
+    return config;
+}
+
 function getConfig(configFileName, isServer) {
     let configPath = findConfigPath(configFileName);
-    let configFromArgs = utils.parseArgs(isServer);
+    let configFromArgs = parseArgs(isServer);
     if (configFromArgs['config_file']) {
         configPath = configFromArgs['config_file'];
     }
