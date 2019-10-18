@@ -8,12 +8,12 @@ const Encryptor = require("./encrypt").Encryptor;
 
 let connections = 0;
 
-function handlerConnection(KEY, METHOD, timeout) {
+function handlerConnection({password, method, timeout}) {
     return function (connection) {
         let addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
             stage;
         connections += 1;
-        encryptor = new Encryptor(KEY, METHOD);
+        encryptor = new Encryptor(password, method);
         stage = 0;
         headerLength = 0;
         remote = null;
@@ -234,17 +234,17 @@ function handlerServerOnError() {
     };
 }
 
-function handlerServerListen(ip, port) {
+function handlerServerListen({server_ip, port}) {
     return () => {
-        log.info("server listening at " + ip + ":" + port + " ");
+        log.info("server listening at " + server_ip + ":" + port + " ");
     };
 }
 
 function createServer({port, password, server_ip, method, timeout}) {
     log.info("calculating ciphers for port " + port);
     udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    let server = net.createServer(handlerConnection(password, method, timeout));
-    server.listen(port, server_ip, handlerServerListen(server_ip, port));
+    let server = net.createServer(handlerConnection({password, method, timeout}));
+    server.listen(port, server_ip, handlerServerListen({server_ip, port}));
     server.on("error", handlerServerOnError());
 }
 
