@@ -1,4 +1,3 @@
-const utils = require("./utils");
 const fs = require("fs");
 const path = require("path");
 const log = require("./log");
@@ -116,6 +115,9 @@ function parseArgs(isServer = false) {
     return config;
 }
 
+/**
+ * 重要函数
+ */
 function getConfig(configFileName, isServer) {
     let configPath = findConfigPath(configFileName);
     let configFromArgs = parseArgs(isServer);
@@ -131,7 +133,7 @@ function getConfig(configFileName, isServer) {
 
 function afterProcess(config) {
     if (config.verbose) {
-        utils.config(utils.DEBUG);
+        log.config(log.DEBUG);
     }
 }
 
