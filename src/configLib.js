@@ -1,6 +1,7 @@
 const utils = require("./utils");
 const fs = require("fs");
 const path = require("path");
+const log = require("./log");
 
 const configFileName = "config.json";
 
@@ -19,7 +20,7 @@ function findConfigPath(configPath) {
     if (fs.existsSync(configPath)) {
         return configPath;
     }
-    utils.error('There is no config.json found');
+    log.error('There is no config.json found');
     process.exit(1);
 }
 
@@ -27,28 +28,28 @@ function checkConfigFile(configPath) {
     if (!configPath) {
         return {};
     }
-    utils.info('loading config from ' + configPath);
+    log.info('loading config from ' + configPath);
     let configContent = fs.readFileSync(configPath);
     try {
         return JSON.parse(configContent.toString("utf8"));
     } catch (e) {
-        utils.error('found an error in config.json: ' + e.message);
+        log.error('found an error in config.json: ' + e.message);
         process.exit(1);
     }
 }
 
 function checkConfig(config) {
     if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
-        utils.warn('config.json not found, you have to specify all config in commandline');
+        log.warn('config.json not found, you have to specify all config in commandline');
         process.exit(1);
     }
 
     if (config.server === '127.0.0.1' || config.server === 'localhost') {
-        utils.warn("Server is set to " + config.server + ", maybe it's not correct");
-        utils.warn("Notice server will listen at " + config.server + ":" + config.server_port);
+        log.warn("Server is set to " + config.server + ", maybe it's not correct");
+        log.warn("Notice server will listen at " + config.server + ":" + config.server_port);
     }
     if ((config.method || '').toLowerCase() === 'rc4') {
-        return utils.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
+        return log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
     }
 }
 
