@@ -1,83 +1,28 @@
-let Encryptor, fs, inet, net, path, udpRelay, utils;
+const net = require("net");
+const udpRelay = require("./udprelay");
+const utils = require("./utils");
+const inet = require("./inet");
+const configLib = require("./configLib");
+const Encryptor = require("./encrypt").Encryptor;
 
-net = require("net");
-fs = require("fs");
-path = require("path");
-udpRelay = require("./udprelay");
-utils = require("./utils");
-inet = require("./inet");
-Encryptor = require("./encrypt").Encryptor;
-
-const configFileName = "config.json";
-
-/**
- * 查找配置文件的准确路径
- */
-function findConfigPath(configPath) {
-    //先查根目录
-    if (fs.existsSync(configPath)) {
-        return configPath;
-    }
-    //在查跟当前代码平级的目录
-    configPath = path.resolve(__dirname, "config.json");
-    if (fs.existsSync(configPath)) {
-        return configPath;
-    }
-    //再查上级目录
-    configPath = path.resolve(__dirname, "../config.json");
-    if (!fs.existsSync(configPath)) {
-        return configPath;
-    }
-    utils.error('There is no config.json found');
-    process.exit(1);
-}
-
-function checkConfigFile(configPath) {
-    if (!configPath) {
-        return {};
-    }
-    utils.info('loading config from ' + configPath);
-    let configContent = fs.readFileSync(configPath);
-    try {
-        return JSON.parse(configContent);
-    } catch (e) {
-        utils.error('found an error in config.json: ' + e.message);
-        process.exit(1);
-    }
-}
 
 function main() {
-    let configPath = findConfigPath(configFileName);
-    let configFromArgs = utils.parseArgs(true);
-
-    let METHOD, SERVER, a_server_ip,
-        connections, k, key, port, portPassword, servers, timeout, v, _results;
-
-    console.log(utils.version);
-    if (configFromArgs['config_file']) {
-        configPath = configFromArgs['config_file'];
-    }
-
-    let config = checkConfigFile(configPath);
+    /////////////////////
+    let a_server_ip, connections, servers, _results;
     //////////
 
+    console.log(utils.version);
+    let config = configLib.getServerConfig();
+    console.log(config);
+    //////////////////////
 
-    for (k in configFromArgs) {
-        v = configFromArgs[k];
-        config[k] = v;
-    }
-    if (config.verbose) {
-        utils.config(utils.DEBUG);
-    }
+    let timeout = Math.floor(config.timeout * 1000) || 300000;
+    let portPassword = config['port_password'];
+    let port = config['server_port'];
+    let key = config['password'];
+    let METHOD = config['method'];
+    let SERVER = config['server'];
 
-    //检查一遍 config 的地址对不对
-    utils.checkConfig(config);
-    timeout = Math.floor(config.timeout * 1000) || 300000;
-    portPassword = config.port_password;
-    port = config.server_port;
-    key = config.password;
-    METHOD = config.method;
-    SERVER = config.server;
     if (!(SERVER && (port || portPassword) && key)) {
         utils.warn('config.json not found, you have to specify all config in commandline');
         process.exit(1);
