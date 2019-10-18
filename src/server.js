@@ -7,7 +7,7 @@ const log = require("./log");
 const Encryptor = require("./encrypt").Encryptor;
 
 
-function getConnectionListener(connections, KEY, METHOD, timeout) {
+function handlerConnection(connections, KEY, METHOD, timeout) {
     return function (connection) {
         let addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
             stage;
@@ -220,24 +220,31 @@ function getConnectionListener(connections, KEY, METHOD, timeout) {
     };
 }
 
-function createServer(port, key, ip, connections, method, timeout) {
-
-    log.info("calculating ciphers for port " + port);
-    let server = net.createServer(getConnectionListener(connections, key, method, timeout));
-    server.listen(port, ip, function () {
-        log.info("server listening at " + ip + ":" + port + " ");
-    });
-    udpRelay.createServer(ip, port, null, null, key, method, timeout, false);
-    server.on("error", function (e) {
+function handlerServerOnError() {
+    return e => {
         if (e.code === "EADDRINUSE") {
-            utils.error("Address in use, aborting");
+            log.error("Address in use, aborting");
         } else {
-            utils.error(e);
+            log.error(e);
         }
-        process.stdout.on('drain', function () {
+        process.stdout.on('drain', () => {
             process.exit(1);
         });
-    });
+    };
+}
+
+function handlerServerListen(ip, port) {
+    return () => {
+        log.info("server listening at " + ip + ":" + port + " ");
+    };
+}
+
+function createServer(port, key, ip, connections, method, timeout) {
+    log.info("calculating ciphers for port " + port);
+    udpRelay.createServer(ip, port, null, null, key, method, timeout, false);
+    let server = net.createServer(handlerConnection(connections, key, method, timeout));
+    server.listen(port, ip, handlerServerListen(ip, port));
+    server.on("error", handlerServerOnError());
 }
 
 function main() {
