@@ -221,8 +221,15 @@ function handlerConnection({password, method, timeout}) {
     };
 }
 
-function handlerServerOnError() {
-    return e => {
+
+function createServer({port, password, server_ip, method, timeout}) {
+    log.info("calculating ciphers for port " + port);
+    // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
+    let server = net.createServer(handlerConnection({password, method, timeout}));
+    server.listen(port, server_ip, () => {
+        log.info("server listening at " + server_ip + ":" + port + " ");
+    });
+    server.on("error", e => {
         if (e.code === "EADDRINUSE") {
             log.error("Address in use, aborting");
         } else {
@@ -231,21 +238,7 @@ function handlerServerOnError() {
         process.stdout.on('drain', () => {
             process.exit(1);
         });
-    };
-}
-
-function handlerServerListen({server_ip, port}) {
-    return () => {
-        log.info("server listening at " + server_ip + ":" + port + " ");
-    };
-}
-
-function createServer({port, password, server_ip, method, timeout}) {
-    log.info("calculating ciphers for port " + port);
-    udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    let server = net.createServer(handlerConnection({password, method, timeout}));
-    server.listen(port, server_ip, handlerServerListen({server_ip, port}));
-    server.on("error", handlerServerOnError());
+    });
 }
 
 function main() {
