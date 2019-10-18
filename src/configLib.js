@@ -115,7 +115,7 @@ function parseArgs(isServer = false) {
     return config;
 }
 
-function transformToPortPassword(config) {
+function transform(config) {
     if (config['port_password']) {
         if (config['server_port'] || config['password']) {
             log.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
@@ -125,6 +125,10 @@ function transformToPortPassword(config) {
         config['port_password'][config['server_port'].toString()] = config['password'];
         delete config['server_port'];
         delete config['password'];
+    }
+
+    if (!(config['server'] instanceof Array)) {
+        config['server'] = [config['server']];
     }
     return config;
 }
@@ -141,7 +145,7 @@ function getConfig(configFileName, isServer) {
     let config = checkConfigFile(configPath);
     Object.assign(config, configFromArgs);
     checkConfig(config);
-    config = transformToPortPassword(config);
+    config = transform(config);
     afterProcess(config);
     return config;
 }

@@ -9,7 +9,7 @@ const Encryptor = require("./encrypt").Encryptor;
 
 function getConnectionListener(connections, KEY, METHOD, timeout) {
     return function (connection) {
-        var addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
+        let addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
             stage;
         connections += 1;
         encryptor = new Encryptor(KEY, METHOD);
@@ -30,7 +30,7 @@ function getConnectionListener(connections, KEY, METHOD, timeout) {
             return log.debug("connections: " + connections);
         };
         connection.on("data", function (data) {
-            var addrtype, buf;
+            let addrtype, buf;
             utils.log(utils.EVERYTHING, "connection on data");
             try {
                 data = encryptor.decrypt(data);
@@ -79,7 +79,7 @@ function getConnectionListener(connections, KEY, METHOD, timeout) {
                     }
                     connection.pause();
                     remote = net.connect(remotePort, remoteAddr, function () {
-                        var i, piece;
+                        let i, piece;
                         utils.info("connecting " + remoteAddr + ":" + remotePort);
                         if (!encryptor || !remote || !connection) {
                             if (remote) {
@@ -208,7 +208,7 @@ function getConnectionListener(connections, KEY, METHOD, timeout) {
                 return remote.resume();
             }
         });
-        return connection.setTimeout(timeout, function () {
+        connection.setTimeout(timeout, function () {
             utils.debug("connection on timeout");
             if (remote) {
                 remote.destroy();
@@ -220,72 +220,43 @@ function getConnectionListener(connections, KEY, METHOD, timeout) {
     };
 }
 
+function createServer(port, key, ip, connections, method, timeout) {
+
+    log.info("calculating ciphers for port " + port);
+    let server = net.createServer(getConnectionListener(connections, key, method, timeout));
+    server.listen(port, ip, function () {
+        log.info("server listening at " + ip + ":" + port + " ");
+    });
+    udpRelay.createServer(ip, port, null, null, key, method, timeout, false);
+    server.on("error", function (e) {
+        if (e.code === "EADDRINUSE") {
+            utils.error("Address in use, aborting");
+        } else {
+            utils.error(e);
+        }
+        process.stdout.on('drain', function () {
+            process.exit(1);
+        });
+    });
+}
+
 function main() {
     console.log(utils.version);
     let config = configLib.getServerConfig();
     console.log(config);
     //////////////////////
-
     let timeout = Math.floor(config.timeout * 1000) || 300000;
     let portPassword = config['port_password'];
-    let METHOD = config['method'];
-    let SERVER = config['server'];
-
+    let method = config['method'];
+    let servers = config['server'];
     ///////////////////
     let connections = 0;
-
-    let _results = [];
-
-    for (let port in portPassword) {
+    Object.keys(portPassword).forEach(port => {
         let key = portPassword[port];
-        let servers = SERVER;
-        if (!(servers instanceof Array)) {
-            servers = [servers];
-        }
-        _results.push((function () {
-            var _i, _len, _results1;
-            _results1 = [];
-            for (_i = 0, _len = servers.length; _i < _len; _i++) {
-                let a_server_ip = servers[_i];
-                _results1.push((async function () {
-
-                    ////////////////////////
-                    var KEY, PORT, server, server_ip;
-                    //获取端口 密码 ip
-                    PORT = port;
-                    KEY = key;
-                    server_ip = a_server_ip;
-                    log.info("calculating ciphers for port " + PORT);
-
-                    /////////////////////////
-                    /**
-                     *  开始建立服务器
-                     * @type {Server}
-                     */
-                    server = net.createServer(getConnectionListener(connections, KEY, METHOD, timeout));
-
-                    // 开始侦听 tcp server
-                    server.listen(PORT, server_ip, function () {
-                        return log.info("server listening at " + server_ip + ":" + PORT + " ");
-                    });
-                    //建立 udp server
-                    // udpRelay.createServer(server_ip, PORT, null, null, key, METHOD, timeout, false);
-                    server.on("error", function (e) {
-                        if (e.code === "EADDRINUSE") {
-                            utils.error("Address in use, aborting");
-                        } else {
-                            utils.error(e);
-                        }
-                        process.stdout.on('drain', function () {
-                            process.exit(1);
-                        });
-                    });
-                })());
-            }
-            return _results1;
-        })());
-    }
-    return _results;
+        servers.forEach(ip => {
+            createServer(port, key, ip, connections, method, timeout)
+        });
+    });
 }
 
 main();
