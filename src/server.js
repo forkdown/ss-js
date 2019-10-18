@@ -6,8 +6,9 @@ const configLib = require("./configLib");
 const log = require("./log");
 const Encryptor = require("./encrypt").Encryptor;
 
+let connections = 0;
 
-function handlerConnection(connections, KEY, METHOD, timeout) {
+function handlerConnection(KEY, METHOD, timeout) {
     return function (connection) {
         let addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
             stage;
@@ -239,31 +240,20 @@ function handlerServerListen(ip, port) {
     };
 }
 
-function createServer(port, key, ip, connections, method, timeout) {
+function createServer({port, password, server_ip, method, timeout}) {
     log.info("calculating ciphers for port " + port);
-    udpRelay.createServer(ip, port, null, null, key, method, timeout, false);
-    let server = net.createServer(handlerConnection(connections, key, method, timeout));
-    server.listen(port, ip, handlerServerListen(ip, port));
+    udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
+    let server = net.createServer(handlerConnection(password, method, timeout));
+    server.listen(port, server_ip, handlerServerListen(server_ip, port));
     server.on("error", handlerServerOnError());
 }
 
 function main() {
     console.log(utils.version);
-    let config = configLib.getServerConfig();
-    console.log(config);
-    //////////////////////
-    let timeout = Math.floor(config.timeout * 1000) || 300000;
-    let portPassword = config['port_password'];
-    let method = config['method'];
-    let servers = config['server'];
-    ///////////////////
-    let connections = 0;
-    Object.keys(portPassword).forEach(port => {
-        let key = portPassword[port];
-        servers.forEach(ip => {
-            createServer(port, key, ip, connections, method, timeout)
-        });
-    });
+    let configArr = configLib.getServerExpandedConfigArray();
+    configArr.forEach(config => {
+        createServer(config);
+    })
 }
 
 main();

@@ -160,6 +160,26 @@ function getServerConfig() {
     return getConfig(configFileName, true);
 }
 
+function getServerExpandedConfigArray() {
+    let config = getServerConfig();
+    let expandedConfigArray = [];
+    let timeout = Math.floor(config.timeout * 1000) || 300000;
+    Object.keys(config['port_password']).forEach(port => {
+        let password = config['port_password'][port];
+        config['server'].forEach(server_ip => {
+            let expandedConfig = {
+                timeout: timeout,
+                password: password,
+                port: port,
+                method: config['method'],
+                server_ip: server_ip,
+            };
+            expandedConfigArray.push(expandedConfig);
+        });
+    });
+    return expandedConfigArray;
+}
+
 module.exports = {
-    getServerConfig,
+    getServerExpandedConfigArray
 };
