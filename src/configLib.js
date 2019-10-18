@@ -37,6 +37,21 @@ function checkConfigFile(configPath) {
     }
 }
 
+function checkConfig(config) {
+    if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
+        utils.warn('config.json not found, you have to specify all config in commandline');
+        process.exit(1);
+    }
+
+    if (config.server === '127.0.0.1' || config.server === 'localhost') {
+        utils.warn("Server is set to " + config.server + ", maybe it's not correct");
+        utils.warn("Notice server will listen at " + config.server + ":" + config.server_port);
+    }
+    if ((config.method || '').toLowerCase() === 'rc4') {
+        return utils.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
+    }
+}
+
 function getConfig(configFileName, isServer) {
     let configPath = findConfigPath(configFileName);
     let configFromArgs = utils.parseArgs(isServer);
@@ -45,12 +60,12 @@ function getConfig(configFileName, isServer) {
     }
     let config = checkConfigFile(configPath);
     Object.assign(config, configFromArgs);
-    utils.checkConfig(config);
-    afterConfig(config);
+    checkConfig(config);
+    afterProcess(config);
     return config;
 }
 
-function afterConfig(config) {
+function afterProcess(config) {
     if (config.verbose) {
         utils.config(utils.DEBUG);
     }

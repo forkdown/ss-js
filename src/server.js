@@ -23,10 +23,12 @@ function main() {
     let METHOD = config['method'];
     let SERVER = config['server'];
 
-    if (!(SERVER && (port || portPassword) && key)) {
+    if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
         utils.warn('config.json not found, you have to specify all config in commandline');
         process.exit(1);
     }
+
+    ///////////////////
     connections = 0;
     if (portPassword) {
         if (port || key) {
