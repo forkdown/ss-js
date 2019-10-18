@@ -46,5 +46,5 @@ function error(msg) {
 }
 
 module.exports = {
-    config, verbose, debug, info, warn, error, VERBOSE, DEBUG, INFO, WARN, ERROR
+    config, verbose, debug, info, warn, error
 };
