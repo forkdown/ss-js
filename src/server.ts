@@ -1,3 +1,18 @@
+/**
+ # as sslocal:
+ # stage 0 SOCKS hello received from local, send hello to local
+ # stage 1 addr received from local, query DNS for remote
+ # stage 2 UDP assoc
+ # stage 3 DNS resolved, connect to remote
+ # stage 4 still connecting, more data from local received
+ # stage 5 remote connected, piping local and remote
+ # as ssserver:
+ # stage 0 just jump to stage 1
+ # stage 1 addr received from local, query DNS for remote
+ # stage 3 DNS resolved, connect to remote
+ # stage 4 still connecting, more data from local received
+ # stage 5 remote connected, piping local and remote
+ **/
 import net from "net";
 import {ExpandedConfig} from "./configLib";
 
@@ -37,6 +52,9 @@ function handlerConnection(config: ExpandedConfig) {
             encryptor = null;
             return log.debug("connections: " + connections);
         };
+        /**
+         * connection on data
+         */
         connection.on("data", function (data) {
             let addrtype, buf;
             log.debug("connection on data");
@@ -54,12 +72,7 @@ function handlerConnection(config: ExpandedConfig) {
                 return;
             }
             ////////////////////
-            if (stage === 5) {
-                if (!remote.write(data)) {
-                    connection.pause();
-                }
-                return;
-            }
+
             if (stage === 0) {
                 try {
                     /////////////////////
@@ -89,9 +102,10 @@ function handlerConnection(config: ExpandedConfig) {
                         headerLength = 2 + addrLen + 2;
                     }
                     connection.pause();
-                    remote = net.connect(remotePort, remoteAddr, function () {
+                    ///////////////////////////
+                    remote = net.createConnection(remotePort, remoteAddr, () => {
                         let i, piece;
-                        log.info("connecting " + remoteAddr + ":" + remotePort);
+                        log.info("connect " + remoteAddr + ":" + remotePort);
                         if (!encryptor || !remote || !connection) {
                             if (remote) {
                                 remote.destroy();
@@ -183,10 +197,13 @@ function handlerConnection(config: ExpandedConfig) {
                         return remote.destroy();
                     }
                 }
-            } else {
-                if (stage === 4) {
-                    return cachedPieces.push(data);
+            } else if (stage === 4) {
+                return cachedPieces.push(data);
+            } else if (stage === 5) {
+                if (!remote.write(data)) {
+                    connection.pause();
                 }
+                return;
             }
         });
         connection.on("end", function () {
