@@ -4,7 +4,7 @@ const INFO = 2;
 const WARN = 3;
 const ERROR = 4;
 
-let logLevel = VERBOSE;
+let logLevel = INFO;
 
 function config(level: number) {
     logLevel = level;

@@ -29,7 +29,7 @@ function handlerConnection(config: ExpandedConfig) {
     return function (connection: net.Socket) {
         //////////////
         let addrLen: any, cachedPieces: any, clean: any, encryptor: any,
-            headerLength, remote: any, remoteAddr: any,
+            headerLength: number, remote: any, remoteAddr: any,
             remotePort: any;
         ///////////////
         connections++;
@@ -72,9 +72,8 @@ function handlerConnection(config: ExpandedConfig) {
                 return;
             }
             ////////////////////
-
-            if (stage === 0) {
-                try {
+            try {
+                if (stage === 0) {
                     /////////////////////
                     addrtype = data[0];
                     if (addrtype === void 0) {
@@ -101,25 +100,24 @@ function handlerConnection(config: ExpandedConfig) {
                         remotePort = data.readUInt16BE(2 + addrLen);
                         headerLength = 2 + addrLen + 2;
                     }
+                    if (data.length > headerLength) {
+                        buf = Buffer.alloc(data.length - headerLength);
+                        data.copy(buf, 0, headerLength);
+                        cachedPieces.push(buf);
+                        buf = null;
+                    }
                     connection.pause();
                     ///////////////////////////
                     remote = net.createConnection(remotePort, remoteAddr, () => {
-                        let i, piece;
                         log.info("connect " + remoteAddr + ":" + remotePort);
-                        if (!encryptor || !remote || !connection) {
-                            if (remote) {
-                                remote.destroy();
-                            }
+                        if (!connection) {
+                            remote.destroy();
                             return;
                         }
-                        i = 0;
                         connection.resume();
-                        while (i < cachedPieces.length) {
-                            piece = cachedPieces[i];
-                            remote.write(piece);
-                            i++;
+                        while (cachedPieces.length) {
+                            remote.write(cachedPieces.shift());
                         }
-                        cachedPieces = null;
                         remote.setTimeout(config.timeout, function () {
                             log.debug("remote on timeout during connect()");
                             if (remote) {
@@ -173,7 +171,7 @@ function handlerConnection(config: ExpandedConfig) {
                             return connection.resume();
                         }
                     });
-                    remote.setTimeout(15 * 1000, function () {
+                    remote.setTimeout(6 * 1000, function () {
                         log.debug("remote on timeout during connect()");
                         if (remote) {
                             remote.destroy();
@@ -182,30 +180,25 @@ function handlerConnection(config: ExpandedConfig) {
                             return connection.destroy();
                         }
                     });
-                    if (data.length > headerLength) {
-                        buf = Buffer.alloc(data.length - headerLength);
-                        data.copy(buf, 0, headerLength);
-                        cachedPieces.push(buf);
-                        buf = null;
-                    }
                     stage = 4;
-                    return log.debug("stage = 4");
-                } catch (e) {
-                    log.error("什么错误" + e);
-                    connection.destroy();
-                    if (remote) {
-                        return remote.destroy();
+                    log.debug("stage = 4");
+                    return
+                }
+                if (stage === 4) {
+                    cachedPieces.push(data);
+                }
+                if (stage === 5) {
+                    if (!remote.write(data)) {
+                        connection.pause();
                     }
                 }
-            } else if (stage === 4) {
-                return cachedPieces.push(data);
-            } else if (stage === 5) {
-                if (!remote.write(data)) {
-                    connection.pause();
-                }
-                return;
+            } catch (e) {
+                log.error(e.stack);
+                connection.destroy();
             }
+
         });
+
         connection.on("end", function () {
             log.debug("connection on end");
             if (remote) {
@@ -244,7 +237,8 @@ function handlerConnection(config: ExpandedConfig) {
                 return connection.destroy();
             }
         });
-    };
+    }
+        ;
 }
 
 //{port, password, server_ip, method, timeout}
