@@ -41,3 +41,4 @@ function error(msg) {
 module.exports = {
     config: config, verbose: verbose, debug: debug, info: info, warn: warn, error: error
 };
+//# sourceMappingURL=log.js.map

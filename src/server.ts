@@ -167,7 +167,7 @@ function handlerConnection(config: ExpandedConfig) {
                             return connection.resume();
                         }
                     });
-                    remote.setTimeout(6 * 1000, function () {
+                    remote.setTimeout(config.timeout, function () {
                         log.debug("remote on timeout during connect()");
                         if (remote) {
                             remote.destroy();
