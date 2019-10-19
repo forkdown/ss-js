@@ -198,7 +198,7 @@ function getServerConfig() {
 }
 
 
-export function getServerExpandedConfigArray(): ExpandedConfig[] {
+function getServerExpandedConfigArray(): ExpandedConfig[] {
     let config = getServerConfig();
     let expandedConfigArray: ExpandedConfig[] = [];
     if (config.timeout == null) {
@@ -231,6 +231,6 @@ export function getServerExpandedConfigArray(): ExpandedConfig[] {
     return expandedConfigArray;
 }
 
-export default {
+module.exports = {
     getServerExpandedConfigArray
-}
+};

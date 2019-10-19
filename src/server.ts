@@ -1,7 +1,7 @@
 import net from "net";
-import ConfigLib, {ExpandedConfig} from "./ConfigLib";
+import {ExpandedConfig} from "./configLib";
 
-// const net = require("net");
+const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const utils = require("./utils");
 const inet = require("./inet");
@@ -35,13 +35,13 @@ function handlerConnection(config: ExpandedConfig) {
         };
         connection.on("data", function (data) {
             let addrtype, buf;
-            utils.log(utils.EVERYTHING, "connection on data");
+            log.debug("connection on data");
             /////////////
             try {
                 data = encryptor.decrypt(data);
             } catch (_error) {
                 let e = _error;
-                utils.error(e);
+                log.error(e);
                 if (remote) {
                     remote.destroy();
                 }
@@ -68,7 +68,7 @@ function handlerConnection(config: ExpandedConfig) {
                     if (addrtype === 3) {
                         addrLen = data[1];
                     } else if (addrtype !== 1 && addrtype !== 4) {
-                        utils.error("unsupported addrtype: " + addrtype + " maybe wrong password");
+                        log.error("unsupported addrtype: " + addrtype + " maybe wrong password");
                         connection.destroy();
                         return;
                     }
@@ -82,15 +82,13 @@ function handlerConnection(config: ExpandedConfig) {
                         headerLength = 19;
                     } else {
                         remoteAddr = data.slice(2, 2 + addrLen).toString("binary");
-                        let dataLength = data.length;
-                        console.log(remoteAddr);
                         remotePort = data.readUInt16BE(2 + addrLen);
                         headerLength = 2 + addrLen + 2;
                     }
                     connection.pause();
                     remote = net.connect(remotePort, remoteAddr, function () {
                         let i, piece;
-                        utils.info("connecting " + remoteAddr + ":" + remotePort);
+                        log.info("connecting " + remoteAddr + ":" + remotePort);
                         if (!encryptor || !remote || !connection) {
                             if (remote) {
                                 remote.destroy();
@@ -106,7 +104,7 @@ function handlerConnection(config: ExpandedConfig) {
                         }
                         cachedPieces = null;
                         remote.setTimeout(config.timeout, function () {
-                            utils.debug("remote on timeout during connect()");
+                            log.debug("remote on timeout during connect()");
                             if (remote) {
                                 remote.destroy();
                             }
@@ -115,10 +113,10 @@ function handlerConnection(config: ExpandedConfig) {
                             }
                         });
                         stage = 5;
-                        return utils.debug("stage = 5");
+                        return log.debug("stage = 5");
                     });
                     remote.on("data", function (data: Buffer) {
-                        utils.log(utils.EVERYTHING, "remote on data");
+                        log.debug("remote on data");
                         if (!encryptor) {
                             if (remote) {
                                 remote.destroy();
@@ -131,17 +129,17 @@ function handlerConnection(config: ExpandedConfig) {
                         }
                     });
                     remote.on("end", function () {
-                        utils.debug("remote on end");
+                        log.debug("remote on end");
                         if (connection) {
                             return connection.end();
                         }
                     });
                     remote.on("error", function (e: String) {
-                        utils.debug("remote on error");
-                        return utils.error("remote " + remoteAddr + ":" + remotePort + " error: " + e);
+                        log.debug("remote on error");
+                        return log.error("remote " + remoteAddr + ":" + remotePort + " error: " + e);
                     });
                     remote.on("close", function (had_error: String) {
-                        utils.debug("remote on close:" + had_error);
+                        log.debug("remote on close:" + had_error);
                         if (had_error) {
                             if (connection) {
                                 return connection.destroy();
@@ -153,13 +151,13 @@ function handlerConnection(config: ExpandedConfig) {
                         }
                     });
                     remote.on("drain", function () {
-                        utils.debug("remote on drain");
+                        log.debug("remote on drain");
                         if (connection) {
                             return connection.resume();
                         }
                     });
                     remote.setTimeout(15 * 1000, function () {
-                        utils.debug("remote on timeout during connect()");
+                        log.debug("remote on timeout during connect()");
                         if (remote) {
                             remote.destroy();
                         }
@@ -168,16 +166,16 @@ function handlerConnection(config: ExpandedConfig) {
                         }
                     });
                     if (data.length > headerLength) {
-                        buf = new Buffer(data.length - headerLength);
+                        buf = Buffer.alloc(data.length - headerLength);
                         data.copy(buf, 0, headerLength);
                         cachedPieces.push(buf);
                         buf = null;
                     }
                     stage = 4;
-                    return utils.debug("stage = 4");
+                    return log.debug("stage = 4");
                 } catch (_error) {
                     let e = _error;
-                    utils.error(e);
+                    log.error(e);
                     connection.destroy();
                     if (remote) {
                         return remote.destroy();
@@ -196,11 +194,11 @@ function handlerConnection(config: ExpandedConfig) {
             }
         });
         connection.on("error", function (e) {
-            utils.debug("connection on error");
-            return utils.error("local error: " + e);
+            log.debug("connection on error");
+            return log.error("local error: " + e);
         });
         connection.on("close", function (had_error) {
-            utils.debug("connection on close:" + had_error);
+            log.debug("connection on close:" + had_error);
             if (had_error) {
                 if (remote) {
                     remote.destroy();
@@ -213,13 +211,13 @@ function handlerConnection(config: ExpandedConfig) {
             return clean();
         });
         connection.on("drain", function () {
-            utils.debug("connection on drain");
+            log.debug("connection on drain");
             if (remote) {
                 return remote.resume();
             }
         });
         connection.setTimeout(config.timeout, function () {
-            utils.debug("connection on timeout");
+            log.debug("connection on timeout");
             if (remote) {
                 remote.destroy();
             }
@@ -252,9 +250,8 @@ function createServer(config: ExpandedConfig) {
 
 
 function main() {
-    console.log(utils.version);
-    let configArr: ExpandedConfig[] = ConfigLib.getServerExpandedConfigArray();
-    console.log(configArr);
+    console.log("\n", utils.version, "\n");
+    let configArr: ExpandedConfig[] = configLib.getServerExpandedConfigArray();
     configArr.forEach((config: any) => {
         createServer(config);
     })

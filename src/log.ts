@@ -4,13 +4,13 @@ const INFO = 2;
 const WARN = 3;
 const ERROR = 4;
 
-let logLevel = DEBUG;
+let logLevel = INFO;
 
-function config(level) {
+function config(level: number) {
     logLevel = level;
 }
 
-function baseLog(level, msg) {
+function baseLog(level: number, msg: any) {
     if (level < logLevel) {
         return
     }
@@ -19,29 +19,29 @@ function baseLog(level, msg) {
             .replace(/T/, ' ')
             .replace(/\./, ' ')
             .replace(/Z/, 'ms');
-        return console.log(dateString, msg);
+        return console.log(dateString, ":", msg);
     } else {
         return console.log(msg);
     }
 }
 
-function verbose(msg) {
+function verbose(msg: any) {
     return baseLog(VERBOSE, msg);
 }
 
-function debug(msg) {
+function debug(msg: any) {
     return baseLog(DEBUG, msg);
 }
 
-function info(msg) {
+function info(msg: any) {
     return baseLog(INFO, msg);
 }
 
-function warn(msg) {
+function warn(msg: any) {
     return baseLog(WARN, msg);
 }
 
-function error(msg) {
+function error(msg: any) {
     return baseLog(ERROR, (msg != null ? msg.stack : void 0) || msg);
 }
 
