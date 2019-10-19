@@ -114,8 +114,9 @@ function handlerConnection(config: ExpandedConfig) {
                             remote.destroy();
                             return;
                         }
+                        //好重要
                         if (!remote) {
-                            console.log("remote lost");
+                            log.error("remote lost");
                             return;
                         }
                         connection.resume();
