@@ -12,12 +12,16 @@ let connections = 0;
 
 function handlerConnection(config: ExpandedConfig) {
     return function (connection: net.Socket) {
+        //////////////
         let addrLen: any, cachedPieces: any, clean: any, encryptor: any,
             headerLength, remote: any, remoteAddr: any,
-            remotePort: any, stage: any;
-        connections += 1;
+            remotePort: any;
+        ///////////////
+        connections++;
         encryptor = new Encryptor(config.password, config.method);
-        stage = 0;
+
+        let stage = 0;
+
         headerLength = 0;
         remote = null;
         cachedPieces = [];
@@ -39,9 +43,8 @@ function handlerConnection(config: ExpandedConfig) {
             /////////////
             try {
                 data = encryptor.decrypt(data);
-            } catch (_error) {
-                let e = _error;
-                log.error(e);
+            } catch (e) {
+                log.error("connection on data error " + e);
                 if (remote) {
                     remote.destroy();
                 }
@@ -173,9 +176,8 @@ function handlerConnection(config: ExpandedConfig) {
                     }
                     stage = 4;
                     return log.debug("stage = 4");
-                } catch (_error) {
-                    let e = _error;
-                    log.error(e);
+                } catch (e) {
+                    log.error("什么错误" + e);
                     connection.destroy();
                     if (remote) {
                         return remote.destroy();
@@ -233,18 +235,21 @@ function createServer(config: ExpandedConfig) {
     log.info("calculating ciphers for port " + config.port);
     // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
     let server = net.createServer(handlerConnection(config));
-    server.listen(config.port, config.server_ip, () => {
-        log.info("server listening at " + config.server_ip + ":" + config.port + " ");
-    });
+
     server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {
             log.error("Address in use, aborting");
+            process.exit(1);
         } else {
-            log.error(e);
+            log.error("unknown error happened " + e);
         }
         process.stdout.on('drain', () => {
             process.exit(1);
         });
+    });
+
+    server.listen(config.port, config.server_ip, () => {
+        log.info("server listening at " + config.server_ip + ":" + config.port + " ");
     });
 }
 

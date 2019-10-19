@@ -26,23 +26,23 @@ function baseLog(level: number, msg: any) {
 }
 
 function verbose(msg: any) {
-    return baseLog(VERBOSE, msg);
+    return baseLog(VERBOSE, "VERBOSE - " + msg);
 }
 
 function debug(msg: any) {
-    return baseLog(DEBUG, msg);
+    return baseLog(DEBUG, "DEBUG - " + msg);
 }
 
 function info(msg: any) {
-    return baseLog(INFO, msg);
+    return baseLog(INFO, "INFO - " + msg);
 }
 
 function warn(msg: any) {
-    return baseLog(WARN, msg);
+    return baseLog(WARN, "WARN - " + msg);
 }
 
 function error(msg: any) {
-    return baseLog(ERROR, (msg != null ? msg.stack : void 0) || msg);
+    return baseLog(ERROR, "ERROR - " + msg);
 }
 
 module.exports = {
