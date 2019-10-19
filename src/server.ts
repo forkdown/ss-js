@@ -1,19 +1,22 @@
-const net = require("net");
+import net from "net";
+import ConfigLib, {ExpandedConfig} from "./ConfigLib";
+
+// const net = require("net");
 const udpRelay = require("./udprelay");
 const utils = require("./utils");
 const inet = require("./inet");
-const configLib = require("./configLib");
 const log = require("./log");
 const Encryptor = require("./encrypt").Encryptor;
 
 let connections = 0;
 
-function handlerConnection({password, method, timeout}) {
-    return function (connection) {
-        let addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort,
-            stage;
+function handlerConnection(config: ExpandedConfig) {
+    return function (connection: net.Socket) {
+        let addrLen: any, cachedPieces: any, clean: any, encryptor: any,
+            headerLength, remote: any, remoteAddr: any,
+            remotePort: any, stage: any;
         connections += 1;
-        encryptor = new Encryptor(password, method);
+        encryptor = new Encryptor(config.password, config.method);
         stage = 0;
         headerLength = 0;
         remote = null;
@@ -26,17 +29,18 @@ function handlerConnection({password, method, timeout}) {
             log.debug("clean");
             connections -= 1;
             remote = null;
-            connection = null;
+            connection.destroy();
             encryptor = null;
             return log.debug("connections: " + connections);
         };
         connection.on("data", function (data) {
             let addrtype, buf;
             utils.log(utils.EVERYTHING, "connection on data");
+            /////////////
             try {
                 data = encryptor.decrypt(data);
             } catch (_error) {
-                e = _error;
+                let e = _error;
                 utils.error(e);
                 if (remote) {
                     remote.destroy();
@@ -46,6 +50,7 @@ function handlerConnection({password, method, timeout}) {
                 }
                 return;
             }
+            ////////////////////
             if (stage === 5) {
                 if (!remote.write(data)) {
                     connection.pause();
@@ -54,10 +59,12 @@ function handlerConnection({password, method, timeout}) {
             }
             if (stage === 0) {
                 try {
+                    /////////////////////
                     addrtype = data[0];
                     if (addrtype === void 0) {
                         return;
                     }
+                    /////////////
                     if (addrtype === 3) {
                         addrLen = data[1];
                     } else if (addrtype !== 1 && addrtype !== 4) {
@@ -75,6 +82,8 @@ function handlerConnection({password, method, timeout}) {
                         headerLength = 19;
                     } else {
                         remoteAddr = data.slice(2, 2 + addrLen).toString("binary");
+                        let dataLength = data.length;
+                        console.log(remoteAddr);
                         remotePort = data.readUInt16BE(2 + addrLen);
                         headerLength = 2 + addrLen + 2;
                     }
@@ -96,7 +105,7 @@ function handlerConnection({password, method, timeout}) {
                             i++;
                         }
                         cachedPieces = null;
-                        remote.setTimeout(timeout, function () {
+                        remote.setTimeout(config.timeout, function () {
                             utils.debug("remote on timeout during connect()");
                             if (remote) {
                                 remote.destroy();
@@ -108,7 +117,7 @@ function handlerConnection({password, method, timeout}) {
                         stage = 5;
                         return utils.debug("stage = 5");
                     });
-                    remote.on("data", function (data) {
+                    remote.on("data", function (data: Buffer) {
                         utils.log(utils.EVERYTHING, "remote on data");
                         if (!encryptor) {
                             if (remote) {
@@ -127,11 +136,11 @@ function handlerConnection({password, method, timeout}) {
                             return connection.end();
                         }
                     });
-                    remote.on("error", function (e) {
+                    remote.on("error", function (e: String) {
                         utils.debug("remote on error");
                         return utils.error("remote " + remoteAddr + ":" + remotePort + " error: " + e);
                     });
-                    remote.on("close", function (had_error) {
+                    remote.on("close", function (had_error: String) {
                         utils.debug("remote on close:" + had_error);
                         if (had_error) {
                             if (connection) {
@@ -167,7 +176,7 @@ function handlerConnection({password, method, timeout}) {
                     stage = 4;
                     return utils.debug("stage = 4");
                 } catch (_error) {
-                    e = _error;
+                    let e = _error;
                     utils.error(e);
                     connection.destroy();
                     if (remote) {
@@ -209,7 +218,7 @@ function handlerConnection({password, method, timeout}) {
                 return remote.resume();
             }
         });
-        connection.setTimeout(timeout, function () {
+        connection.setTimeout(config.timeout, function () {
             utils.debug("connection on timeout");
             if (remote) {
                 remote.destroy();
@@ -221,15 +230,15 @@ function handlerConnection({password, method, timeout}) {
     };
 }
 
-
-function createServer({port, password, server_ip, method, timeout}) {
-    log.info("calculating ciphers for port " + port);
+//{port, password, server_ip, method, timeout}
+function createServer(config: ExpandedConfig) {
+    log.info("calculating ciphers for port " + config.port);
     // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    let server = net.createServer(handlerConnection({password, method, timeout}));
-    server.listen(port, server_ip, () => {
-        log.info("server listening at " + server_ip + ":" + port + " ");
+    let server = net.createServer(handlerConnection(config));
+    server.listen(config.port, config.server_ip, () => {
+        log.info("server listening at " + config.server_ip + ":" + config.port + " ");
     });
-    server.on("error", e => {
+    server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {
             log.error("Address in use, aborting");
         } else {
@@ -241,10 +250,12 @@ function createServer({port, password, server_ip, method, timeout}) {
     });
 }
 
+
 function main() {
     console.log(utils.version);
-    let configArr = configLib.getServerExpandedConfigArray();
-    configArr.forEach(config => {
+    let configArr: ExpandedConfig[] = ConfigLib.getServerExpandedConfigArray();
+    console.log(configArr);
+    configArr.forEach((config: any) => {
         createServer(config);
     })
 }

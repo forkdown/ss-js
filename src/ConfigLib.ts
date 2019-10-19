@@ -2,9 +2,29 @@ const fs = require("fs");
 const path = require("path");
 const log = require("./log");
 
-const configFileName = "config.json";
+const configFileName: string = "ssconfig.json";
 
-function printLocalHelp() {
+interface Config {
+    server?: string
+    servers?: string[]
+    server_port?: number
+    password?: string
+    port_password?: { [key: string]: string }
+    method: string
+    config_file?: string
+    timeout?: number
+}
+
+export interface ExpandedConfig {
+    port: number
+    password: string
+    server_ip: string
+    method: string
+    timeout: number
+}
+
+
+function printLocalHelp(): void {
     console.log("\nCommand: ss-local\n\n" +
         "  -h, --help            show this help message and exit\n" +
         "  -b LOCAL_ADDR         local binding address, default is 127.0.0.1\n" +
@@ -18,7 +38,7 @@ function printLocalHelp() {
         "  -c CONFIG             path to config file");
 }
 
-function printServerHelp() {
+function printServerHelp(): void {
     console.log("\nCommand: ss-server\n\n" +
         "  -h, --help            show this help message and exit\n" +
         "  -s SERVER_ADDR        server address\n" +
@@ -29,7 +49,7 @@ function printServerHelp() {
         "  -c CONFIG             path to config file");
 }
 
-function findConfigPath(configPath) {
+function findConfigPath(configPath: string): string {
     //先查根目录
     if (fs.existsSync(configPath)) {
         return configPath;
@@ -46,23 +66,35 @@ function findConfigPath(configPath) {
     }
     log.error('There is no config.json found');
     process.exit(1);
+    return ""
 }
 
-function checkConfigFile(configPath) {
+
+function checkConfigFile(configPath: string): Config {
+    let config: Config = {
+        server: "0.0.0.0",
+        server_port: 8388,
+        password: "foobar",
+        method: "aes-256-cfb",
+        timeout: 600
+    };
     if (!configPath) {
-        return {};
+        return config;
     }
     log.info('loading config from ' + configPath);
     let configContent = fs.readFileSync(configPath);
     try {
-        return JSON.parse(configContent.toString("utf8"));
+        let config2 = JSON.parse(configContent.toString("utf8"));
+        Object.assign(config, config2);
+        return config;
     } catch (e) {
         log.error('found an error in config.json: ' + e.message);
         process.exit(1);
+        return config
     }
 }
 
-function checkConfig(config) {
+function checkConfig(config: Config) {
     if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
         log.warn('config.json not found, you have to specify all config in commandline');
         process.exit(1);
@@ -77,28 +109,28 @@ function checkConfig(config) {
     }
 }
 
-function parseArgs(isServer = false) {
+function parseArgs(isServer = false): Config {
     let argv = process.argv;
-    let definition = {
-        '-l': 'local_port',
-        '-p': 'server_port',
-        '-s': 'server',
+    let definition: { [key: string]: string } = {
+        "-l": 'local_port',
+        "-p": 'server_port',
+        "-s": 'server',
         '-k': 'password',
         '-c': 'config_file',
         '-m': 'method',
         '-b': 'local_address',
         '-t': 'timeout'
     };
-    let config = {};
+    let config: any = {};
     let nextIsValue = false;
-    let lastKey = null;
+    let lastKey: string = "";
 
     argv.forEach(item => {
         if (nextIsValue) {
             config[lastKey] = item;
             nextIsValue = false;
         } else if (definition[item]) {
-            lastKey = definition[item];
+            definition.lastKey = definition[item];
             nextIsValue = true;
         } else if ('-v' === item) {
             config['verbose'] = true;
@@ -115,28 +147,33 @@ function parseArgs(isServer = false) {
     return config;
 }
 
-function transform(config) {
+function transform(config: Config): Config {
     if (config['port_password']) {
         if (config['server_port'] || config['password']) {
             log.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
         }
     } else {
-        config['port_password'] = {};
-        config['port_password'][config['server_port'].toString()] = config['password'];
+        config.port_password = {};
+        let port = config["server_port"];
+        if (port == null) {
+            port = 8388
+        }
+        Object.assign(config.port_password, {[port.toString()]: config.password});
+        // config['port_password'][config['server_port'].toString()] = config['password'];
         delete config['server_port'];
         delete config['password'];
     }
-
-    if (!(config['server'] instanceof Array)) {
-        config['server'] = [config['server']];
+    if (config['server'] == null) {
+        config.server = "0.0.0.0"
     }
+    config.servers = [config['server']];
     return config;
 }
 
 /**
  * 重要函数
  */
-function getConfig(configFileName, isServer) {
+function getConfig(configFileName: string, isServer: boolean) {
     let configPath = findConfigPath(configFileName);
     let configFromArgs = parseArgs(isServer);
     if (configFromArgs['config_file']) {
@@ -150,7 +187,7 @@ function getConfig(configFileName, isServer) {
     return config;
 }
 
-function afterProcess(config) {
+function afterProcess(config: any) {
     if (config.verbose) {
         log.config(log.DEBUG);
     }
@@ -160,17 +197,31 @@ function getServerConfig() {
     return getConfig(configFileName, true);
 }
 
-function getServerExpandedConfigArray() {
+
+export function getServerExpandedConfigArray(): ExpandedConfig[] {
     let config = getServerConfig();
-    let expandedConfigArray = [];
+    let expandedConfigArray: ExpandedConfig[] = [];
+    if (config.timeout == null) {
+        config.timeout = 600;
+    }
     let timeout = Math.floor(config.timeout * 1000) || 300000;
-    Object.keys(config['port_password']).forEach(port => {
+
+    if (config.port_password == null) {
+        return []
+    }
+    Object.keys(config.port_password).forEach(port => {
+        if (config.port_password == null) {
+            return []
+        }
         let password = config['port_password'][port];
-        config['server'].forEach(server_ip => {
-            let expandedConfig = {
+        if (config.servers == null) {
+            return expandedConfigArray
+        }
+        config['servers'].forEach((server_ip: string) => {
+            let expandedConfig: ExpandedConfig = {
                 timeout: timeout,
                 password: password,
-                port: port,
+                port: parseInt(port),
                 method: config['method'],
                 server_ip: server_ip,
             };
@@ -180,6 +231,6 @@ function getServerExpandedConfigArray() {
     return expandedConfigArray;
 }
 
-module.exports = {
+export default {
     getServerExpandedConfigArray
-};
+}

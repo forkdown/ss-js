@@ -9,17 +9,20 @@
     "author": "clowwindy",
     "version": "2.0.1",
     "license": "MIT",
-    "main": "./src/server.js",
+    "main": "build/server.js",
     "bin": {
         "sslocal": "./bin/ss-local",
         "ssserver": "./bin/ss-server"
     },
     "scripts": {
-        "server": "node ./src/server",
-        "local": "node ./src/local"
+        "server": "tsc && node build/server",
+        "local": "tsc && node build/local"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/qieru/ss-js"
+    },
+    "dependencies": {
+        "@types/node": "^12.11.1"
     }
 }
