@@ -123,15 +123,6 @@ function handlerConnection(config: ExpandedConfig) {
                         while (cachedPieces.length) {
                             remote.write(cachedPieces.shift());
                         }
-                        remote.setTimeout(config.timeout, function () {
-                            log.debug("remote on timeout during connect()");
-                            if (remote) {
-                                remote.destroy();
-                            }
-                            if (connection) {
-                                return connection.destroy();
-                            }
-                        });
                         stage = 5;
                         return log.debug("stage = 5");
                     });
