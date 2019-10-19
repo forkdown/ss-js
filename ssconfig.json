@@ -4,6 +4,6 @@
     "local_address": "127.0.0.1",
     "local_port": 1080,
     "password": "evenardo",
-    "timeout": 600,
+    "timeout": 6,
     "method": "aes-256-cfb"
 }
