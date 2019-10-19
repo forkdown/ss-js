@@ -114,6 +114,10 @@ function handlerConnection(config: ExpandedConfig) {
                             remote.destroy();
                             return;
                         }
+                        if (!remote) {
+                            console.log("remote lost");
+                            return;
+                        }
                         connection.resume();
                         while (cachedPieces.length) {
                             remote.write(cachedPieces.shift());
@@ -194,7 +198,12 @@ function handlerConnection(config: ExpandedConfig) {
                 }
             } catch (e) {
                 log.error(e.stack);
-                connection.destroy();
+                if (remote) {
+                    remote.destroy();
+                }
+                if (connection) {
+                    connection.destroy();
+                }
             }
 
         });
