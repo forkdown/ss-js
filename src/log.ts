@@ -10,8 +10,17 @@ function config(level: number) {
     logLevel = level;
 }
 
-function baseLog(level: number, msg: any) {
+function baseLog(level: number, msg: any): void {
+    let dateString = new Date().toISOString()
+        .replace(/T/, ' ')
+        .replace(/\./, ' ')
+        .replace(/Z/, 'ms');
+
     if (level < logLevel) {
+        return
+    }
+    if (level == ERROR) {
+        console.log("\x1b[91m", dateString, ":", msg);
         return
     }
     if (level >= DEBUG) {
@@ -19,10 +28,13 @@ function baseLog(level: number, msg: any) {
             .replace(/T/, ' ')
             .replace(/\./, ' ')
             .replace(/Z/, 'ms');
-        return console.log(dateString, ":", msg);
+        console.log("\x1b[97m", dateString, ":", msg);
+        return
     } else {
-        return console.log(msg);
+        console.log("\x1b[96m", dateString, ":", msg);
+        return
     }
+
 }
 
 function verbose(msg: any) {

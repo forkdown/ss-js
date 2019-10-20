@@ -107,7 +107,7 @@ function handlerConnection(config) {
                     }
                     connection.pause();
                     ///////////////////////////
-                    remote = net_1.default.createConnection(remotePort, remoteAddr, function () {
+                    remote.connect(remotePort, remoteAddr, function () {
                         log.info("connect " + remoteAddr + ":" + remotePort);
                         if (!connection) {
                             remote.destroy();
@@ -124,57 +124,6 @@ function handlerConnection(config) {
                         }
                         stage = 5;
                         return log.debug("stage = 5");
-                    });
-                    remote.on("data", function (data) {
-                        log.debug("remote on data");
-                        if (!encryptor) {
-                            if (remote) {
-                                remote.destroy();
-                            }
-                            return;
-                        }
-                        data = encryptor.encrypt(data);
-                        if (!connection.write(data)) {
-                            return remote.pause();
-                        }
-                    });
-                    remote.on("end", function () {
-                        log.debug("remote on end");
-                        if (connection) {
-                            return connection.end();
-                        }
-                    });
-                    remote.on("error", function (e) {
-                        log.debug("remote on error");
-                        return log.error("remote " + remoteAddr + ":" + remotePort + " error: " + e);
-                    });
-                    remote.on("close", function (had_error) {
-                        log.debug("remote on close:" + had_error);
-                        if (had_error) {
-                            if (connection) {
-                                return connection.destroy();
-                            }
-                        }
-                        else {
-                            if (connection) {
-                                return connection.end();
-                            }
-                        }
-                    });
-                    remote.on("drain", function () {
-                        log.debug("remote on drain");
-                        if (connection) {
-                            return connection.resume();
-                        }
-                    });
-                    remote.setTimeout(config.timeout, function () {
-                        log.debug("remote on timeout during connect()");
-                        if (remote) {
-                            remote.destroy();
-                        }
-                        if (connection) {
-                            return connection.destroy();
-                        }
                     });
                     stage = 4;
                     log.debug("stage = 4");
@@ -197,6 +146,57 @@ function handlerConnection(config) {
                 if (connection) {
                     connection.destroy();
                 }
+            }
+        });
+        remote.on("data", function (data) {
+            log.debug("remote on data");
+            if (!encryptor) {
+                if (remote) {
+                    remote.destroy();
+                }
+                return;
+            }
+            data = encryptor.encrypt(data);
+            if (!connection.write(data)) {
+                return remote.pause();
+            }
+        });
+        remote.on("end", function () {
+            log.debug("remote on end");
+            if (connection) {
+                return connection.end();
+            }
+        });
+        remote.on("error", function (e) {
+            log.debug("remote on error");
+            return log.error("remote " + remoteAddr + ":" + remotePort + " error: " + e);
+        });
+        remote.on("close", function (had_error) {
+            log.debug("remote on close:" + had_error);
+            if (had_error) {
+                if (connection) {
+                    return connection.destroy();
+                }
+            }
+            else {
+                if (connection) {
+                    return connection.end();
+                }
+            }
+        });
+        remote.on("drain", function () {
+            log.debug("remote on drain");
+            if (connection) {
+                return connection.resume();
+            }
+        });
+        remote.setTimeout(config.timeout, function () {
+            log.debug("remote on timeout during connect()");
+            if (remote) {
+                remote.destroy();
+            }
+            if (connection) {
+                return connection.destroy();
             }
         });
         connection.on("end", function () {

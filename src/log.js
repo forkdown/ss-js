@@ -9,18 +9,28 @@ function config(level) {
     logLevel = level;
 }
 function baseLog(level, msg) {
+    var dateString = new Date().toISOString()
+        .replace(/T/, ' ')
+        .replace(/\./, ' ')
+        .replace(/Z/, 'ms');
     if (level < logLevel) {
         return;
     }
+    if (level == ERROR) {
+        console.log("\x1b[91m", dateString, ":", msg);
+        return;
+    }
     if (level >= DEBUG) {
-        var dateString = new Date().toISOString()
+        var dateString_1 = new Date().toISOString()
             .replace(/T/, ' ')
             .replace(/\./, ' ')
             .replace(/Z/, 'ms');
-        return console.log(dateString, ":", msg);
+        console.log("\x1b[97m", dateString_1, ":", msg);
+        return;
     }
     else {
-        return console.log(msg);
+        console.log("\x1b[96m", dateString, ":", msg);
+        return;
     }
 }
 function verbose(msg) {
