@@ -269,7 +269,8 @@ function createServer(config: ExpandedConfig) {
 function main() {
     console.log("\n", utils.version, "\n");
     let configArr: ExpandedConfig[] = configLib.getServerExpandedConfigArray();
-    configArr.forEach((config: any) => {
+    configArr.forEach((config: ExpandedConfig) => {
+        log.info("start with : " + JSON.stringify(config));
         createServer(config);
     })
 }

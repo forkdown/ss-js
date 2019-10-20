@@ -4,15 +4,16 @@ const log = require("./log");
 
 const configFileName: string = "ssconfig.json";
 
-interface Config {
-    server?: string
-    servers?: string[]
-    server_port?: number
-    password?: string
-    port_password?: { [key: string]: string }
-    method: string
-    config_file?: string
-    timeout?: number
+class Config {
+    server: string = "0.0.0.0";
+    servers: string[] = [];
+    server_port: number = 8388;
+    password: string = "foobar";
+    port_password: any = {};
+    method: string = "aes-256-cfb";
+    config_file: string = "ssconfig.json";
+    timeout: number = 6;
+    verbose: boolean = false;
 }
 
 export interface ExpandedConfig {
@@ -71,41 +72,30 @@ function findConfigPath(configPath: string): string {
 
 
 function checkConfigFile(configPath: string): Config {
-    let config: Config = {
-        server: "0.0.0.0",
-        server_port: 8388,
-        password: "foobar",
-        method: "aes-256-cfb",
-        timeout: 600
-    };
-    if (!configPath) {
+    let config = new Config();
+    if (configPath === "") {
         return config;
     }
-    log.info('loading config from ' + configPath);
+    log.info('loading config from file: ' + configPath);
     let configContent = fs.readFileSync(configPath);
     try {
-        let config2 = JSON.parse(configContent.toString("utf8"));
-        Object.assign(config, config2);
+        let configJson = JSON.parse(configContent.toString("utf8"));
+        Object.assign(config, configJson);
         return config;
     } catch (e) {
-        log.error('found an error in config.json: ' + e.message);
+        log.error('found an error in ' + configPath + " : " + e.message);
         process.exit(1);
         return config
     }
 }
 
-function checkConfig(config: Config) {
-    if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
-        log.warn('config.json not found, you have to specify all config in commandline');
-        process.exit(1);
-    }
-
+function checkConfig(config: Config): void {
     if (config.server === '127.0.0.1' || config.server === 'localhost') {
         log.warn("Server is set to " + config.server + ", maybe it's not correct");
         log.warn("Notice server will listen at " + config.server + ":" + config['server_port']);
     }
     if ((config.method || '').toLowerCase() === 'rc4') {
-        return log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
+        log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
     }
 }
 
@@ -124,6 +114,7 @@ function parseArgs(isServer = false): Config {
     let config: any = {};
     let nextIsValue = false;
     let lastKey: string = "";
+    let configRet = new Config();
 
     argv.forEach(item => {
         if (nextIsValue) {
@@ -144,29 +135,22 @@ function parseArgs(isServer = false): Config {
         }
 
     });
+    Object.assign(configRet, config);
     return config;
 }
 
 function transform(config: Config): Config {
-    if (config['port_password']) {
-        if (config['server_port'] || config['password']) {
-            log.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
-        }
-    } else {
-        config.port_password = {};
-        let port = config["server_port"];
-        if (port == null) {
-            port = 8388
-        }
-        Object.assign(config.port_password, {[port.toString()]: config.password});
-        // config['port_password'][config['server_port'].toString()] = config['password'];
-        delete config['server_port'];
-        delete config['password'];
+    let len = Object.keys(config.port_password).length;
+    if (len > 0 && (config['server_port'] || config['password'])) {
+        log.warn('warning: if had port_password , server_port and password will be ignored');
     }
-    if (config['server'] == null) {
-        config.server = "0.0.0.0"
+    if (len == 0) {
+        let port = config['server_port'].toString();
+        config.port_password[port] = config['password'];
     }
-    config.servers = [config['server']];
+    if (config.servers.length === 0) {
+        config.servers = [config['server']];
+    }
     return config;
 }
 

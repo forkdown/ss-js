@@ -267,6 +267,7 @@ function main() {
     console.log("\n", utils.version, "\n");
     var configArr = configLib.getServerExpandedConfigArray();
     configArr.forEach(function (config) {
+        log.info("start with : " + JSON.stringify(config));
         createServer(config);
     });
 }

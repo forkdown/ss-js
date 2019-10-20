@@ -4,6 +4,20 @@ var fs = require("fs");
 var path = require("path");
 var log = require("./log");
 var configFileName = "ssconfig.json";
+var Config = /** @class */ (function () {
+    function Config() {
+        this.server = "0.0.0.0";
+        this.servers = [];
+        this.server_port = 8388;
+        this.password = "foobar";
+        this.port_password = {};
+        this.method = "aes-256-cfb";
+        this.config_file = "ssconfig.json";
+        this.timeout = 6;
+        this.verbose = false;
+    }
+    return Config;
+}());
 function printLocalHelp() {
     console.log("\nCommand: ss-local\n\n" +
         "  -h, --help            show this help message and exit\n" +
@@ -47,40 +61,30 @@ function findConfigPath(configPath) {
     return "";
 }
 function checkConfigFile(configPath) {
-    var config = {
-        server: "0.0.0.0",
-        server_port: 8388,
-        password: "foobar",
-        method: "aes-256-cfb",
-        timeout: 600
-    };
-    if (!configPath) {
+    var config = new Config();
+    if (configPath === "") {
         return config;
     }
-    log.info('loading config from ' + configPath);
+    log.info('loading config from file: ' + configPath);
     var configContent = fs.readFileSync(configPath);
     try {
-        var config2 = JSON.parse(configContent.toString("utf8"));
-        Object.assign(config, config2);
+        var configJson = JSON.parse(configContent.toString("utf8"));
+        Object.assign(config, configJson);
         return config;
     }
     catch (e) {
-        log.error('found an error in config.json: ' + e.message);
+        log.error('found an error in ' + configPath + " : " + e.message);
         process.exit(1);
         return config;
     }
 }
 function checkConfig(config) {
-    if (!(config['server'] && (config['server_port'] || config['port_password']) && config['password'])) {
-        log.warn('config.json not found, you have to specify all config in commandline');
-        process.exit(1);
-    }
     if (config.server === '127.0.0.1' || config.server === 'localhost') {
         log.warn("Server is set to " + config.server + ", maybe it's not correct");
         log.warn("Notice server will listen at " + config.server + ":" + config['server_port']);
     }
     if ((config.method || '').toLowerCase() === 'rc4') {
-        return log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
+        log.warn('RC4 is not safe; please use a safer cipher, like AES-256-CFB');
     }
 }
 function parseArgs(isServer) {
@@ -99,6 +103,7 @@ function parseArgs(isServer) {
     var config = {};
     var nextIsValue = false;
     var lastKey = "";
+    var configRet = new Config();
     argv.forEach(function (item) {
         if (nextIsValue) {
             config[lastKey] = item;
@@ -121,30 +126,21 @@ function parseArgs(isServer) {
             process.exit(2);
         }
     });
+    Object.assign(configRet, config);
     return config;
 }
 function transform(config) {
-    var _a;
-    if (config['port_password']) {
-        if (config['server_port'] || config['password']) {
-            log.warn('warning: port_password should not be used with server_port and password. server_port and password will be ignored');
-        }
+    var len = Object.keys(config.port_password).length;
+    if (len > 0 && (config['server_port'] || config['password'])) {
+        log.warn('warning: if had port_password , server_port and password will be ignored');
     }
-    else {
-        config.port_password = {};
-        var port = config["server_port"];
-        if (port == null) {
-            port = 8388;
-        }
-        Object.assign(config.port_password, (_a = {}, _a[port.toString()] = config.password, _a));
-        // config['port_password'][config['server_port'].toString()] = config['password'];
-        delete config['server_port'];
-        delete config['password'];
+    if (len == 0) {
+        var port = config['server_port'].toString();
+        config.port_password[port] = config['password'];
     }
-    if (config['server'] == null) {
-        config.server = "0.0.0.0";
+    if (config.servers.length === 0) {
+        config.servers = [config['server']];
     }
-    config.servers = [config['server']];
     return config;
 }
 /**
