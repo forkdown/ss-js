@@ -23,35 +23,30 @@ const inet = require("./inet");
 const log = require("./log");
 const Encryptor = require("./encrypt").Encryptor;
 
+// 连接总数
+// 这是个全局的变量
 let connections = 0;
 
 function handlerConnection(config: ExpandedConfig) {
     return function (connection: net.Socket) {
-        //////////////
-        let addrLen: any, cachedPieces: any, clean: any, encryptor: any,
-            headerLength: number, remote: any, remoteAddr: any,
-            remotePort: any;
-        ///////////////
+        // 下面的内容是每个local 与 server 建立一次连接 就会初始化一个
         connections++;
-        encryptor = new Encryptor(config.password, config.method);
-
+        let encryptor = new Encryptor(config.password, config.method);
         let stage = 0;
-
-        headerLength = 0;
-        remote = null;
-        cachedPieces = [];
-        addrLen = 0;
-        remoteAddr = null;
-        remotePort = null;
+        //头部长度
+        let headerLength = 0;
+        // todo 一会儿试试 new Socket
+        let remote = new net.Socket();
+        // 接收缓存
+        let cachedPieces: any[] = [];
+        // 地址长度
+        let addrLen = 0;
+        // remote地址
+        let remoteAddr: string = "";
+        // remote端口
+        let remotePort: number = 0;
         log.debug("connections: " + connections);
-        clean = function () {
-            log.debug("clean");
-            connections -= 1;
-            remote = null;
-            connection.destroy();
-            encryptor = null;
-            return log.debug("connections: " + connections);
-        };
+
         /**
          * connection on data
          */
@@ -221,7 +216,12 @@ function handlerConnection(config: ExpandedConfig) {
                     remote.end();
                 }
             }
-            return clean();
+            log.debug("clean");
+            connections--;
+            remote.destroy();
+            connection.destroy();
+            encryptor = null;
+            log.debug("connections: " + connections);
         });
         connection.on("drain", function () {
             log.debug("connection on drain");

@@ -25,30 +25,28 @@ var utils = require("./utils");
 var inet = require("./inet");
 var log = require("./log");
 var Encryptor = require("./encrypt").Encryptor;
+// 连接总数
+// 这是个全局的变量
 var connections = 0;
 function handlerConnection(config) {
     return function (connection) {
-        //////////////
-        var addrLen, cachedPieces, clean, encryptor, headerLength, remote, remoteAddr, remotePort;
-        ///////////////
+        // 下面的内容是每个local 与 server 建立一次连接 就会初始化一个
         connections++;
-        encryptor = new Encryptor(config.password, config.method);
+        var encryptor = new Encryptor(config.password, config.method);
         var stage = 0;
-        headerLength = 0;
-        remote = null;
-        cachedPieces = [];
-        addrLen = 0;
-        remoteAddr = null;
-        remotePort = null;
+        //头部长度
+        var headerLength = 0;
+        // todo 一会儿试试 new Socket
+        var remote = new net_1.default.Socket();
+        // 接收缓存
+        var cachedPieces = [];
+        // 地址长度
+        var addrLen = 0;
+        // remote地址
+        var remoteAddr = "";
+        // remote端口
+        var remotePort = 0;
         log.debug("connections: " + connections);
-        clean = function () {
-            log.debug("clean");
-            connections -= 1;
-            remote = null;
-            connection.destroy();
-            encryptor = null;
-            return log.debug("connections: " + connections);
-        };
         /**
          * connection on data
          */
@@ -223,7 +221,12 @@ function handlerConnection(config) {
                     remote.end();
                 }
             }
-            return clean();
+            log.debug("clean");
+            connections--;
+            remote.destroy();
+            connection.destroy();
+            encryptor = null;
+            log.debug("connections: " + connections);
         });
         connection.on("drain", function () {
             log.debug("connection on drain");
