@@ -37,16 +37,16 @@ function verbose(msg) {
     return baseLog(VERBOSE, "VERBOSE - " + msg);
 }
 function debug(msg) {
-    return baseLog(DEBUG, "DEBUG - " + msg);
+    return baseLog(DEBUG, "DEBUG   - " + msg);
 }
 function info(msg) {
-    return baseLog(INFO, "INFO - " + msg);
+    return baseLog(INFO, "INFO    - " + msg);
 }
 function warn(msg) {
-    return baseLog(WARN, "WARN - " + msg);
+    return baseLog(WARN, "WARN    - " + msg);
 }
 function error(msg) {
-    return baseLog(ERROR, "ERROR - " + msg);
+    return baseLog(ERROR, "ERROR   - " + msg);
 }
 module.exports = {
     config: config, verbose: verbose, debug: debug, info: info, warn: warn, error: error

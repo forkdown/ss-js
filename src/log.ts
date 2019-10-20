@@ -42,19 +42,19 @@ function verbose(msg: any) {
 }
 
 function debug(msg: any) {
-    return baseLog(DEBUG, "DEBUG - " + msg);
+    return baseLog(DEBUG, "DEBUG   - " + msg);
 }
 
 function info(msg: any) {
-    return baseLog(INFO, "INFO - " + msg);
+    return baseLog(INFO, "INFO    - " + msg);
 }
 
 function warn(msg: any) {
-    return baseLog(WARN, "WARN - " + msg);
+    return baseLog(WARN, "WARN    - " + msg);
 }
 
 function error(msg: any) {
-    return baseLog(ERROR, "ERROR - " + msg);
+    return baseLog(ERROR, "ERROR   - " + msg);
 }
 
 module.exports = {
