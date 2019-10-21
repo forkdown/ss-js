@@ -15,7 +15,7 @@
         "ssserver": "./bin/ss-server"
     },
     "scripts": {
-        "server": "tsc && node build/server",
+        "server": "tsc && node --expose-gc build/server",
         "local": "tsc && node build/local"
     },
     "repository": {

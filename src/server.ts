@@ -98,6 +98,10 @@ function createServer(config: ExpandedConfig) {
 
 
 function main() {
+    setInterval(() => {
+        console.log(process.memoryUsage().rss / 1e6);
+        global.gc();
+    }, 200);
     const pack = require("../package.json");
     console.log("\n", pack.name + " " + pack.version, "\n");
     const configArr: ExpandedConfig[] = configLib.getServerExpandedConfigArray();
