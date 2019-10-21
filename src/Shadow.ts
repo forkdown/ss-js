@@ -2,21 +2,36 @@ const log = require("./log");
 const Encryptor = require("./encrypt").Encryptor;
 const utils = require("./utils");
 const inet = require("./inet");
+import net from "net";
 
 export default class Shadow {
     public error = false;
     public remoteAddr: string = "";
     public remotePort: number = 0;
-    public dataCacheFromLocal: any[] = [];
-    public dataCacheFromRemote: any[] = [];
-
-
-    public encryptor = new Encryptor("evenardo", "aes-256-cfb");
+    private encryptor = new Encryptor("evenardo", "aes-256-cfb");
+    private dataCacheFromLocal: any[] = [];
+    private dataCacheFromRemote: any[] = [];
+    private localSocket = new net.Socket();
+    private remoteSocket = new net.Socket();
     private headerLength: number = 0;
     private isFirst: boolean = true;
 
-    constructor(password: string, method: string) {
+    constructor(password: string, method: string, localSocket: net.Socket, remoteSocket: net.Socket) {
         this.encryptor = new Encryptor(password, method);
+        this.localSocket = localSocket;
+        this.remoteSocket = remoteSocket;
+    }
+
+    public writeToLocal() {
+        while (this.dataCacheFromRemote.length) {
+            this.localSocket.write(this.dataCacheFromRemote.shift());
+        }
+    }
+
+    public writeToRemote() {
+        while (this.dataCacheFromLocal.length) {
+            this.remoteSocket.write(this.dataCacheFromLocal.shift());
+        }
     }
 
     public onLocalData(data: Buffer) {

@@ -24,39 +24,22 @@ const log = require("./log");
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: net.Socket) {
         let remoteSocket = new net.Socket();
-        let shadow = new Shadow(config.password, config.method);
+        let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
         localSocket.on("data", function (data) {
-            let data2: Buffer = Buffer.from(data);
-            shadow.onLocalData(data2);
-            if (remoteSocket.writable) {
-                if (!remoteSocket.write(shadow.dataCacheFromLocal.shift())) {
-                    localSocket.pause();
-                }
-                return;
+            shadow.onLocalData(data);
+            if (!remoteSocket.writable) {
+                remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+                    shadow.writeToRemote();
+                });
             }
-            localSocket.pause();
-            remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
-                log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                if (!localSocket) {
-                    remoteSocket.destroy();
-                    return;
-                }
-                localSocket.resume();
-                while (shadow.dataCacheFromLocal.length) {
-                    remoteSocket.write(shadow.dataCacheFromLocal.shift());
-                }
-            });
-            return
+            shadow.writeToRemote();
         });
 
         remoteSocket.on("data", function (data: Buffer) {
             log.debug("remote on data");
             shadow.onRemoteData(data);
-            while (shadow.dataCacheFromRemote.length) {
-                if (!localSocket.write(shadow.dataCacheFromRemote.shift())) {
-                    return remoteSocket.pause();
-                }
-            }
+            shadow.writeToLocal();
         });
         remoteSocket.on("end", function () {
             log.debug("remote on end");
