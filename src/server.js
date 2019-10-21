@@ -32,26 +32,19 @@ function handlerConnection(config) {
     return function (connection) {
         // 下面的内容是每个local 与 server 建立一次连接 就会初始化一个
         connections++;
+        log.debug("connections: " + connections);
         var encryptor = new Encryptor(config.password, config.method);
         var stage = 0;
-        //头部长度
         var headerLength = 0;
-        // todo 一会儿试试 new Socket
         var remote = new net_1.default.Socket();
-        // 接收缓存
         var cachedPieces = [];
-        // 地址长度
         var addrLen = 0;
-        // remote地址
         var remoteAddr = "";
-        // remote端口
         var remotePort = 0;
-        log.debug("connections: " + connections);
         /**
          * connection on data
          */
         connection.on("data", function (data) {
-            var addrtype, buf;
             log.debug("connection on data");
             /////////////
             try {
@@ -71,39 +64,35 @@ function handlerConnection(config) {
             try {
                 if (stage === 0) {
                     /////////////////////
-                    addrtype = data[0];
-                    if (addrtype === void 0) {
+                    var addrType = data[0];
+                    if (addrType === void 0) {
                         return;
                     }
-                    /////////////
-                    if (addrtype === 3) {
-                        addrLen = data[1];
-                    }
-                    else if (addrtype !== 1 && addrtype !== 4) {
-                        log.error("unsupported addrtype: " + addrtype + " maybe wrong password");
+                    if (addrType !== 3 && addrType !== 1 && addrType !== 4) {
+                        log.error("unsupported addrtype: " + addrType + " maybe wrong password");
                         connection.destroy();
                         return;
                     }
-                    if (addrtype === 1) {
-                        remoteAddr = utils.inetNtoa(data.slice(1, 5));
-                        remotePort = data.readUInt16BE(5);
-                        headerLength = 7;
-                    }
-                    else if (addrtype === 4) {
-                        remoteAddr = inet.inet_ntop(data.slice(1, 17));
-                        remotePort = data.readUInt16BE(17);
-                        headerLength = 19;
-                    }
-                    else {
+                    if (addrType === 3) {
+                        addrLen = data[1];
                         remoteAddr = data.slice(2, 2 + addrLen).toString("binary");
                         remotePort = data.readUInt16BE(2 + addrLen);
                         headerLength = 2 + addrLen + 2;
                     }
+                    if (addrType === 1) {
+                        remoteAddr = utils.inetNtoa(data.slice(1, 5));
+                        remotePort = data.readUInt16BE(5);
+                        headerLength = 1 + 4 + 2;
+                    }
+                    if (addrType === 4) {
+                        remoteAddr = inet.inet_ntop(data.slice(1, 17));
+                        remotePort = data.readUInt16BE(17);
+                        headerLength = 1 + 16 + 2;
+                    }
+                    //  拿到 remoteAddr, remotePort, headerLength
+                    ////////////////////////////
                     if (data.length > headerLength) {
-                        buf = Buffer.alloc(data.length - headerLength);
-                        data.copy(buf, 0, headerLength);
-                        cachedPieces.push(buf);
-                        buf = null;
+                        cachedPieces.push(Buffer.from(data.slice(headerLength)));
                     }
                     connection.pause();
                     ///////////////////////////
