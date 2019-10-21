@@ -38,11 +38,6 @@ function handlerConnection(config: ExpandedConfig) {
                         remote.destroy();
                         return;
                     }
-                    //好重要
-                    if (!remote) {
-                        log.error("remote lost");
-                        return;
-                    }
                     connection.resume();
                     while (shadow.dataCacheFromLocal.length) {
                         remote.write(shadow.dataCacheFromLocal.shift());
