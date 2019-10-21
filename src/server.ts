@@ -30,44 +30,33 @@ function handlerConnection(config: ExpandedConfig) {
             log.debug("connection on data");
             let data2: Buffer = Buffer.from(data);
             shadow.onLocalData(data2);
-            try {
-                if (stage === 0) {
-                    connection.pause();
-                    remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
-                        log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                        if (!connection) {
-                            remote.destroy();
-                            return;
-                        }
-                        //好重要
-                        if (!remote) {
-                            log.error("remote lost");
-                            return;
-                        }
-                        connection.resume();
-                        while (shadow.dataCacheFromLocal.length) {
-                            remote.write(shadow.dataCacheFromLocal.shift());
-                        }
-                        stage = 5;
-                        return log.debug("stage = 5");
-                    });
-                    return
-                }
-                if (stage === 5) {
-                    if (!remote.write(shadow.dataCacheFromLocal.shift())) {
-                        connection.pause();
+            if (stage === 0) {
+                connection.pause();
+                remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+                    if (!connection) {
+                        remote.destroy();
+                        return;
                     }
-                }
-            } catch (e) {
-                log.error(e.stack);
-                if (remote) {
-                    remote.destroy();
-                }
-                if (connection) {
-                    connection.destroy();
+                    //好重要
+                    if (!remote) {
+                        log.error("remote lost");
+                        return;
+                    }
+                    connection.resume();
+                    while (shadow.dataCacheFromLocal.length) {
+                        remote.write(shadow.dataCacheFromLocal.shift());
+                    }
+                    stage = 5;
+                    return log.debug("stage = 5");
+                });
+                return
+            }
+            if (stage === 5) {
+                if (!remote.write(shadow.dataCacheFromLocal.shift())) {
+                    connection.pause();
                 }
             }
-
         });
 
         remote.on("data", function (data: Buffer) {
@@ -87,6 +76,12 @@ function handlerConnection(config: ExpandedConfig) {
         });
         remote.on("error", function (e: String) {
             log.debug("remote on error");
+            if (remote) {
+                remote.destroy();
+            }
+            if (connection) {
+                connection.destroy();
+            }
             return log.error("remote " + shadow.remoteAddr + ":" + shadow.remotePort + " error: " + e);
         });
         remote.on("close", function (had_error: String) {
