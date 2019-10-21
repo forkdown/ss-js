@@ -22,6 +22,18 @@ export default class Shadow {
         this.remoteSocket = remoteSocket;
     }
 
+    public destroy() {
+        this.localSocket.end();
+        this.localSocket.destroy();
+        this.remoteSocket.end();
+        this.remoteSocket.destroy();
+    }
+
+    public resume() {
+        this.localSocket.resume();
+        this.remoteSocket.resume();
+    }
+
     public writeToLocal() {
         while (this.dataCacheFromRemote.length) {
             this.localSocket.write(this.dataCacheFromRemote.shift());

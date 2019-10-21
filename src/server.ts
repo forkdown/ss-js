@@ -25,102 +25,51 @@ function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: net.Socket) {
         let remoteSocket = new net.Socket();
         let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+
         localSocket.on("data", function (data) {
             shadow.onLocalData(data);
             if (!remoteSocket.writable) {
                 remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
                     log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                    shadow.writeToRemote();
                 });
             }
             shadow.writeToRemote();
         });
-
         remoteSocket.on("data", function (data: Buffer) {
-            log.debug("remote on data");
             shadow.onRemoteData(data);
             shadow.writeToLocal();
         });
+
         remoteSocket.on("end", function () {
-            log.debug("remote on end");
-            if (localSocket) {
-                return localSocket.end();
-            }
+            shadow.destroy();
         });
         remoteSocket.on("error", function (e: String) {
-            log.debug("remote on error");
-            if (remoteSocket) {
-                remoteSocket.destroy();
-            }
-            if (localSocket) {
-                localSocket.destroy();
-            }
-            return log.error("remote " + shadow.remoteAddr + ":" + shadow.remotePort + " error: " + e);
+            shadow.destroy();
         });
         remoteSocket.on("close", function (had_error: String) {
-            log.debug("remote on close:" + had_error);
-            if (had_error) {
-                if (localSocket) {
-                    return localSocket.destroy();
-                }
-            } else {
-                if (localSocket) {
-                    return localSocket.end();
-                }
-            }
+            shadow.destroy();
         });
         remoteSocket.on("drain", function () {
-            log.debug("remote on drain");
-            if (localSocket) {
-                return localSocket.resume();
-            }
+            shadow.resume();
         });
         remoteSocket.setTimeout(config.timeout, function () {
-            log.debug("remote on timeout during connect()");
-            if (remoteSocket) {
-                remoteSocket.destroy();
-            }
-            if (localSocket) {
-                return localSocket.destroy();
-            }
+            shadow.destroy();
         });
+
         localSocket.on("end", function () {
-            log.debug("connection on end");
-            if (remoteSocket) {
-                return remoteSocket.end();
-            }
+            shadow.destroy();
         });
         localSocket.on("error", function (e) {
-            log.debug("connection on error");
-            return log.error("local error: " + e);
+            shadow.destroy();
         });
         localSocket.on("close", function (had_error) {
-            log.debug("connection on close:" + had_error);
-            if (had_error) {
-                if (remoteSocket) {
-                    remoteSocket.destroy();
-                }
-            } else {
-                if (remoteSocket) {
-                    remoteSocket.end();
-                }
-            }
-            log.debug("clean");
+            shadow.destroy();
         });
         localSocket.on("drain", function () {
-            log.debug("connection on drain");
-            if (remoteSocket) {
-                return remoteSocket.resume();
-            }
+            shadow.resume();
         });
         localSocket.setTimeout(config.timeout, function () {
-            log.debug("connection on timeout");
-            if (remoteSocket) {
-                remoteSocket.destroy();
-            }
-            if (localSocket) {
-                return localSocket.destroy();
-            }
+            shadow.destroy();
         });
     };
 }
