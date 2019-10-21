@@ -20,50 +20,20 @@ import Shadow from "./Shadow";
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const utils = require("./utils");
-// const inet = require("./inet");
 const log = require("./log");
-// const Encryptor = require("./encrypt").Encryptor;
-
-// 连接总数
-// 这是个全局的变量
-let connections = 0;
 
 function handlerConnection(config: ExpandedConfig) {
     return function (connection: net.Socket) {
-        // 下面的内容是每个local 与 server 建立一次连接 就会初始化一个
-        connections++;
-        log.debug("connections: " + connections);
-        // let encryptor = new Encryptor(config.password, config.method);
         let stage = 0;
         let remote = new net.Socket();
-
-        /**
-         * connection on data
-         */
         let shadow = new Shadow(config.password, config.method);
         connection.on("data", function (data) {
             log.debug("connection on data");
             let data2: Buffer = Buffer.from(data);
             shadow.onLocalData(data2);
-            /////////////
-            // try {
-            //     data = encryptor.decrypt(data);
-            //     console.log("there", data);
-            // } catch (e) {
-            //     log.error("connection on data error " + e);
-            //     if (remote) {
-            //         remote.destroy();
-            //     }
-            //     if (connection) {
-            //         connection.destroy();
-            //     }
-            //     return;
-            // }
-            ////////////////////
             try {
                 if (stage === 0) {
                     connection.pause();
-                    ///////////////////////////
                     remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
                         log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
                         if (!connection) {
@@ -76,28 +46,15 @@ function handlerConnection(config: ExpandedConfig) {
                             return;
                         }
                         connection.resume();
-                        // while (cachedPieces.length) {
                         while (shadow.dataCacheFromLocal.length) {
-                            // remote.write(cachedPieces.shift());
                             remote.write(shadow.dataCacheFromLocal.shift());
                         }
                         stage = 5;
                         return log.debug("stage = 5");
                     });
-
-                    // stage = 4;
-                    // log.debug("stage = 4");
                     return
                 }
-                // if (stage === 4) {
-                //     cachedPieces.push(data);
-                //     shadow.onLocalData(data);
-                //     console.log("my stag 4 cache", shadow.dataCacheFromLocal);
-                //     console.log("th stag 4 cache", cachedPieces);
-                //
-                // }
                 if (stage === 5) {
-                    // if (!remote.write(data)) {
                     if (!remote.write(shadow.dataCacheFromLocal.shift())) {
                         connection.pause();
                     }
@@ -116,13 +73,6 @@ function handlerConnection(config: ExpandedConfig) {
 
         remote.on("data", function (data: Buffer) {
             log.debug("remote on data");
-            // if (!encryptor) {
-            //     if (remote) {
-            //         remote.destroy();
-            //     }
-            //     return;
-            // }
-            // data = encryptor.encrypt(data);
             shadow.onRemoteData(data);
             while (shadow.dataCacheFromRemote.length) {
                 if (!connection.write(shadow.dataCacheFromRemote.shift())) {
@@ -189,12 +139,6 @@ function handlerConnection(config: ExpandedConfig) {
                 }
             }
             log.debug("clean");
-            connections--;
-            remote.destroy();
-            connection.destroy();
-            // shadow = null;
-            // encryptor = null;
-            log.debug("connections: " + connections);
         });
         connection.on("drain", function () {
             log.debug("connection on drain");

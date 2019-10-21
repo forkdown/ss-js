@@ -16,13 +16,11 @@ export default class Shadow {
     private isFirst: boolean = true;
 
     constructor(password: string, method: string) {
-        console.log("new Shadow");
         this.encryptor = new Encryptor(password, method);
     }
 
     public onLocalData(data: Buffer) {
         let dataDecrypted = this.encryptor.decrypt(data);
-        console.log("my0  ", dataDecrypted);
         if (this.isFirst) {
             this.parseHeader(dataDecrypted);
             this.parseFirstData(dataDecrypted);
