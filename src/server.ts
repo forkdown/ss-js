@@ -21,122 +21,122 @@ const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
 
-function handlerConnection(config: ExpandedConfig) {
-    return function (connection: net.Socket) {
-        let remote = new net.Socket();
+function localSocketListener(config: ExpandedConfig) {
+    return function (localSocket: net.Socket) {
+        let remoteSocket = new net.Socket();
         let shadow = new Shadow(config.password, config.method);
-        connection.on("data", function (data) {
+        localSocket.on("data", function (data) {
             let data2: Buffer = Buffer.from(data);
             shadow.onLocalData(data2);
-            if (remote.writable) {
-                if (!remote.write(shadow.dataCacheFromLocal.shift())) {
-                    connection.pause();
+            if (remoteSocket.writable) {
+                if (!remoteSocket.write(shadow.dataCacheFromLocal.shift())) {
+                    localSocket.pause();
                 }
                 return;
             }
-            connection.pause();
-            remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
+            localSocket.pause();
+            remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
                 log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                if (!connection) {
-                    remote.destroy();
+                if (!localSocket) {
+                    remoteSocket.destroy();
                     return;
                 }
-                connection.resume();
+                localSocket.resume();
                 while (shadow.dataCacheFromLocal.length) {
-                    remote.write(shadow.dataCacheFromLocal.shift());
+                    remoteSocket.write(shadow.dataCacheFromLocal.shift());
                 }
             });
             return
         });
 
-        remote.on("data", function (data: Buffer) {
+        remoteSocket.on("data", function (data: Buffer) {
             log.debug("remote on data");
             shadow.onRemoteData(data);
             while (shadow.dataCacheFromRemote.length) {
-                if (!connection.write(shadow.dataCacheFromRemote.shift())) {
-                    return remote.pause();
+                if (!localSocket.write(shadow.dataCacheFromRemote.shift())) {
+                    return remoteSocket.pause();
                 }
             }
         });
-        remote.on("end", function () {
+        remoteSocket.on("end", function () {
             log.debug("remote on end");
-            if (connection) {
-                return connection.end();
+            if (localSocket) {
+                return localSocket.end();
             }
         });
-        remote.on("error", function (e: String) {
+        remoteSocket.on("error", function (e: String) {
             log.debug("remote on error");
-            if (remote) {
-                remote.destroy();
+            if (remoteSocket) {
+                remoteSocket.destroy();
             }
-            if (connection) {
-                connection.destroy();
+            if (localSocket) {
+                localSocket.destroy();
             }
             return log.error("remote " + shadow.remoteAddr + ":" + shadow.remotePort + " error: " + e);
         });
-        remote.on("close", function (had_error: String) {
+        remoteSocket.on("close", function (had_error: String) {
             log.debug("remote on close:" + had_error);
             if (had_error) {
-                if (connection) {
-                    return connection.destroy();
+                if (localSocket) {
+                    return localSocket.destroy();
                 }
             } else {
-                if (connection) {
-                    return connection.end();
+                if (localSocket) {
+                    return localSocket.end();
                 }
             }
         });
-        remote.on("drain", function () {
+        remoteSocket.on("drain", function () {
             log.debug("remote on drain");
-            if (connection) {
-                return connection.resume();
+            if (localSocket) {
+                return localSocket.resume();
             }
         });
-        remote.setTimeout(config.timeout, function () {
+        remoteSocket.setTimeout(config.timeout, function () {
             log.debug("remote on timeout during connect()");
-            if (remote) {
-                remote.destroy();
+            if (remoteSocket) {
+                remoteSocket.destroy();
             }
-            if (connection) {
-                return connection.destroy();
+            if (localSocket) {
+                return localSocket.destroy();
             }
         });
-        connection.on("end", function () {
+        localSocket.on("end", function () {
             log.debug("connection on end");
-            if (remote) {
-                return remote.end();
+            if (remoteSocket) {
+                return remoteSocket.end();
             }
         });
-        connection.on("error", function (e) {
+        localSocket.on("error", function (e) {
             log.debug("connection on error");
             return log.error("local error: " + e);
         });
-        connection.on("close", function (had_error) {
+        localSocket.on("close", function (had_error) {
             log.debug("connection on close:" + had_error);
             if (had_error) {
-                if (remote) {
-                    remote.destroy();
+                if (remoteSocket) {
+                    remoteSocket.destroy();
                 }
             } else {
-                if (remote) {
-                    remote.end();
+                if (remoteSocket) {
+                    remoteSocket.end();
                 }
             }
             log.debug("clean");
         });
-        connection.on("drain", function () {
+        localSocket.on("drain", function () {
             log.debug("connection on drain");
-            if (remote) {
-                return remote.resume();
+            if (remoteSocket) {
+                return remoteSocket.resume();
             }
         });
-        connection.setTimeout(config.timeout, function () {
+        localSocket.setTimeout(config.timeout, function () {
             log.debug("connection on timeout");
-            if (remote) {
-                remote.destroy();
+            if (remoteSocket) {
+                remoteSocket.destroy();
             }
-            if (connection) {
-                return connection.destroy();
+            if (localSocket) {
+                return localSocket.destroy();
             }
         });
     };
@@ -145,8 +145,8 @@ function handlerConnection(config: ExpandedConfig) {
 function createServer(config: ExpandedConfig) {
     log.info("calculating ciphers for port " + config.port);
     // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    const server = net.createServer(handlerConnection(config));
-
+    const server = new net.Server();
+    server.on("connection", localSocketListener(config));
     server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {
             log.error("Address in use, aborting");
