@@ -23,35 +23,30 @@ const log = require("./log");
 
 function handlerConnection(config: ExpandedConfig) {
     return function (connection: net.Socket) {
-        let stage = 0;
         let remote = new net.Socket();
         let shadow = new Shadow(config.password, config.method);
         connection.on("data", function (data) {
-            log.debug("connection on data");
             let data2: Buffer = Buffer.from(data);
             shadow.onLocalData(data2);
-            if (stage === 0) {
-                connection.pause();
-                remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
-                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                    if (!connection) {
-                        remote.destroy();
-                        return;
-                    }
-                    connection.resume();
-                    while (shadow.dataCacheFromLocal.length) {
-                        remote.write(shadow.dataCacheFromLocal.shift());
-                    }
-                    stage = 5;
-                    return log.debug("stage = 5");
-                });
-                return
-            }
-            if (stage === 5) {
+            if (remote.writable) {
                 if (!remote.write(shadow.dataCacheFromLocal.shift())) {
                     connection.pause();
                 }
+                return;
             }
+            connection.pause();
+            remote.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+                if (!connection) {
+                    remote.destroy();
+                    return;
+                }
+                connection.resume();
+                while (shadow.dataCacheFromLocal.length) {
+                    remote.write(shadow.dataCacheFromLocal.shift());
+                }
+            });
+            return
         });
 
         remote.on("data", function (data: Buffer) {
