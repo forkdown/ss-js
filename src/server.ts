@@ -19,7 +19,6 @@ import Shadow from "./Shadow";
 
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
-const utils = require("./utils");
 const log = require("./log");
 
 function handlerConnection(config: ExpandedConfig) {
@@ -155,15 +154,13 @@ function handlerConnection(config: ExpandedConfig) {
                 return connection.destroy();
             }
         });
-    }
-        ;
+    };
 }
 
-//{port, password, server_ip, method, timeout}
 function createServer(config: ExpandedConfig) {
     log.info("calculating ciphers for port " + config.port);
     // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    let server = net.createServer(handlerConnection(config));
+    const server = net.createServer(handlerConnection(config));
 
     server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {
@@ -184,8 +181,9 @@ function createServer(config: ExpandedConfig) {
 
 
 function main() {
-    console.log("\n", utils.version, "\n");
-    let configArr: ExpandedConfig[] = configLib.getServerExpandedConfigArray();
+    const pack = require("../package.json");
+    console.log("\n", pack.name + " " + pack.version, "\n");
+    const configArr: ExpandedConfig[] = configLib.getServerExpandedConfigArray();
     configArr.forEach((config: ExpandedConfig) => {
         log.info("start with : " + JSON.stringify(config));
         createServer(config);
