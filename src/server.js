@@ -83,7 +83,7 @@ function main() {
     setInterval(() => {
         let memoryUsed = Math.floor(process.memoryUsage().rss / 1e6);
         log.info("memory used : " + memoryUsed + "MB ");
-        if (process.memoryUsage().rss / 1e6 > 30) {
+        if (process.memoryUsage().rss / 1e6 > 28) {
             process.exit(1);
         }
     }, 6000);
