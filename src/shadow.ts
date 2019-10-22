@@ -1,79 +1,88 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const net_1 = require("net");
+import {Socket} from "net";
+
 const log = require("./log");
-const { Encryptor } = require("./encrypt");
+const {Encryptor} = require("./encrypt");
 const utils = require("./utils");
 const inet = require("./inet");
-class Shadow {
-    constructor(password, method, localSocket, remoteSocket) {
-        this.error = false;
-        this.remoteAddr = "";
-        this.remotePort = 0;
-        this.encryptor = new Encryptor("evenardo", "aes-256-cfb");
-        this.dataCacheFromLocal = [];
-        this.dataCacheFromRemote = [];
-        this.localSocket = new net_1.Socket();
-        this.remoteSocket = new net_1.Socket();
-        this.headerLength = 0;
-        this.isFirst = true;
+
+export class Shadow {
+    public error = false;
+    public remoteAddr: string = "";
+    public remotePort: number = 0;
+    private encryptor = new Encryptor("evenardo", "aes-256-cfb");
+    private dataCacheFromLocal: any[] = [];
+    private dataCacheFromRemote: any[] = [];
+    private localSocket = new Socket();
+    private remoteSocket = new Socket();
+    private headerLength: number = 0;
+    private isFirst: boolean = true;
+
+    constructor(password: string, method: string, localSocket: Socket, remoteSocket: Socket) {
         this.encryptor = new Encryptor(password, method);
         this.localSocket = localSocket;
         this.remoteSocket = remoteSocket;
     }
-    onClose() {
+
+    public onClose() {
         this.localSocket.end();
         this.localSocket.destroy();
         this.remoteSocket.end();
         this.remoteSocket.destroy();
     }
-    onDrain() {
+
+    public onDrain() {
         this.localSocket.resume();
         this.remoteSocket.resume();
     }
-    writeToLocal() {
+
+    public writeToLocal() {
         while (this.dataCacheFromRemote.length) {
             this.localSocket.write(this.dataCacheFromRemote.shift());
         }
     }
-    writeToRemote() {
+
+    public writeToRemote() {
         while (this.dataCacheFromLocal.length) {
             this.remoteSocket.write(this.dataCacheFromLocal.shift());
         }
     }
-    onLocalData(data) {
+
+    public onLocalData(data: Buffer) {
         let dataDecrypted = this.encryptor.decrypt(data);
         if (this.isFirst) {
             this.parseHeader(dataDecrypted);
             this.parseFirstData(dataDecrypted);
             this.isFirst = false;
-        }
-        else {
+        } else {
             this.decryptDataFromLocalAndPush(dataDecrypted);
         }
     }
-    onRemoteData(data) {
+
+    public onRemoteData(data: Buffer) {
         try {
             let dataEncrypted = this.encryptor.encrypt(data);
             this.encryptDataFromRemoteAndPush(dataEncrypted);
-        }
-        catch (e) {
+        } catch (e) {
             log.error("connection on data error " + e);
             this.error = true;
         }
     }
-    encryptDataFromRemoteAndPush(encryptedData) {
-        this.dataCacheFromRemote.push(encryptedData);
+
+    private encryptDataFromRemoteAndPush(encryptedData: Buffer): void {
+        this.dataCacheFromRemote.push(encryptedData)
     }
-    parseHeader(dataDecrypted) {
+
+    private parseHeader(dataDecrypted: Buffer): void {
         let addrType = dataDecrypted[0];
+
         if (addrType === void 0) {
             this.error = true;
         }
+
         if (addrType !== 3 && addrType !== 1 && addrType !== 4) {
             log.error("unsupported addrtype: " + addrType + " maybe wrong password");
             this.error = true;
-            return;
+            return
         }
         if (addrType === 3) {
             let addrLen = dataDecrypted[1];
@@ -91,18 +100,19 @@ class Shadow {
             this.remotePort = dataDecrypted.readUInt16BE(17);
             this.headerLength = 1 + 16 + 2;
         }
-        return;
+        return
     }
-    parseFirstData(dataDecrypted) {
+
+    private parseFirstData(dataDecrypted: Buffer): void {
         if (dataDecrypted.length > this.headerLength) {
             this.dataCacheFromLocal.push(Buffer.from(dataDecrypted.slice(this.headerLength)));
             return;
         }
         this.error = true;
     }
-    decryptDataFromLocalAndPush(decryptedData) {
+
+    private decryptDataFromLocalAndPush(decryptedData: Buffer): void {
         this.dataCacheFromLocal.push(decryptedData);
     }
 }
-exports.Shadow = Shadow;
-//# sourceMappingURL=shadow.js.map
+

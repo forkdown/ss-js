@@ -19,7 +19,7 @@ function baseLog(level: number, msg: any): void {
     if (level < logLevel) {
         return
     }
-    if (level == ERROR) {
+    if (level === ERROR) {
         console.log("\x1b[91m", dateString, ":", msg);
         return
     }
@@ -56,5 +56,6 @@ function error(msg: any) {
 }
 
 module.exports = {
-    config, verbose, debug, info, warn, error
+    config, verbose, debug, info, warn, error,
+    VERBOSE, DEBUG, INFO, WARN, ERROR
 };

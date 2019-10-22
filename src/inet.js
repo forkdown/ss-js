@@ -12,11 +12,10 @@ function inet_pton(ipString) {
     // *     example 2: inet_pton('127.0.0.1');
     // *     returns 2: '\x7F\x00\x00\x01' (binary)
     var r, x, i, j, f = String.fromCharCode;
-    // let matched = ipString.match(/^(?:\d{1,3}(?:\.|$)){4}/); // IPv4
-    let matched = ipString.match(/(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))/); // IPv4
+    let matched = ipString.match(/^(?:\d{1,3}(?:\.|$)){4}/); // IPv4
+    // let matched = ipString.match(/(((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{1,2})|(1\d{2})|(2[0-4]\d)|(25[0-5]))/); // IPv4
     if (matched) {
         matched = matched[0].split('.');
-        console.log(matched);
         matched = f(matched[0]) + f(matched[1]) + f(matched[2]) + f(matched[3]);
         // Return if 4 bytes, otherwise false.
         return matched.length === 4 ? matched : false;
