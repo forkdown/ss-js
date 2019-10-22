@@ -2,30 +2,9 @@ const fs = require("fs");
 const path = require("path");
 const log = require("./log");
 
-const configFileName: string = "ssconfig.json";
+const configFileName = "ssconfig.json";
 
-class Config {
-    server: string = "0.0.0.0";
-    servers: string[] = [];
-    server_port: number = 8388;
-    password: string = "foobar";
-    port_password: any = {};
-    method: string = "aes-256-cfb";
-    config_file: string = "ssconfig.json";
-    timeout: number = 6;
-    verbose: boolean = false;
-}
-
-export interface ExpandedConfig {
-    port: number
-    password: string
-    server_ip: string
-    method: string
-    timeout: number
-}
-
-
-function printLocalHelp(): void {
+function printLocalHelp() {
     console.log("\nCommand: ss-local\n\n" +
         "  -h, --help            show this help message and exit\n" +
         "  -b LOCAL_ADDR         local binding address, default is 127.0.0.1\n" +
@@ -39,7 +18,7 @@ function printLocalHelp(): void {
         "  -c CONFIG             path to config file");
 }
 
-function printServerHelp(): void {
+function printServerHelp() {
     console.log("\nCommand: ss-server\n\n" +
         "  -h, --help            show this help message and exit\n" +
         "  -s SERVER_ADDR        server address\n" +
@@ -50,7 +29,7 @@ function printServerHelp(): void {
         "  -c CONFIG             path to config file");
 }
 
-function findConfigPath(configPath: string): string {
+function findConfigPath(configPath) {
     //先查根目录
     if (fs.existsSync(configPath)) {
         return configPath;
@@ -71,8 +50,8 @@ function findConfigPath(configPath: string): string {
 }
 
 
-function checkConfigFile(configPath: string): Config {
-    let config = new Config();
+function checkConfigFile(configPath) {
+    let config = {};
     if (configPath === "") {
         return config;
     }
@@ -89,7 +68,7 @@ function checkConfigFile(configPath: string): Config {
     }
 }
 
-function checkConfig(config: Config): void {
+function checkConfig(config) {
     if (config.server === '127.0.0.1' || config.server === 'localhost') {
         log.warn("Server is set to " + config.server + ", maybe it's not correct");
         log.warn("Notice server will listen at " + config.server + ":" + config['server_port']);
@@ -99,9 +78,9 @@ function checkConfig(config: Config): void {
     }
 }
 
-function parseArgs(isServer = false): Config {
+function parseArgs(isServer = false) {
     let argv = process.argv;
-    let definition: { [key: string]: string } = {
+    let definition = {
         "-l": 'local_port',
         "-p": 'server_port',
         "-s": 'server',
@@ -111,10 +90,10 @@ function parseArgs(isServer = false): Config {
         '-b': 'local_address',
         '-t': 'timeout'
     };
-    let config: any = {};
+    let config = {};
     let nextIsValue = false;
-    let lastKey: string = "";
-    let configRet = new Config();
+    let lastKey = "";
+    let configRet = {};
 
     argv.forEach(item => {
         if (nextIsValue) {
@@ -139,16 +118,16 @@ function parseArgs(isServer = false): Config {
     return config;
 }
 
-function transform(config: Config): Config {
+function transform(config) {
     let len = Object.keys(config.port_password).length;
     if (len > 0 && (config['server_port'] || config['password'])) {
         log.warn('warning: if had port_password , server_port and password will be ignored');
     }
-    if (len == 0) {
+    if (len === 0) {
         let port = config['server_port'].toString();
         config.port_password[port] = config['password'];
     }
-    if (config.servers.length === 0) {
+    if (config.servers === void 0) {
         config.servers = [config['server']];
     }
     return config;
@@ -157,7 +136,7 @@ function transform(config: Config): Config {
 /**
  * 重要函数
  */
-function getConfig(configFileName: string, isServer: boolean) {
+function getConfig(configFileName, isServer) {
     let configPath = findConfigPath(configFileName);
     let configFromArgs = parseArgs(isServer);
     if (configFromArgs['config_file']) {
@@ -171,7 +150,7 @@ function getConfig(configFileName: string, isServer: boolean) {
     return config;
 }
 
-function afterProcess(config: any) {
+function afterProcess(config) {
     if (config.verbose) {
         log.config(log.DEBUG);
     }
@@ -182,9 +161,9 @@ function getServerConfig() {
 }
 
 
-function getServerExpandedConfigArray(): ExpandedConfig[] {
+function getServerExpandedConfigArray() {
     let config = getServerConfig();
-    let expandedConfigArray: ExpandedConfig[] = [];
+    let expandedConfigArray = [];
     if (config.timeout == null) {
         config.timeout = 600;
     }
@@ -201,8 +180,8 @@ function getServerExpandedConfigArray(): ExpandedConfig[] {
         if (config.servers == null) {
             return expandedConfigArray
         }
-        config['servers'].forEach((server_ip: string) => {
-            let expandedConfig: ExpandedConfig = {
+        config['servers'].forEach((server_ip) => {
+            let expandedConfig = {
                 timeout: timeout,
                 password: password,
                 port: parseInt(port),

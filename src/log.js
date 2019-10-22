@@ -6,11 +6,11 @@ const ERROR = 4;
 
 let logLevel = INFO;
 
-function config(level: number) {
+function config(level) {
     logLevel = level;
 }
 
-function baseLog(level: number, msg: any): void {
+function baseLog(level, msg) {
     let dateString = new Date().toISOString()
         .replace(/T/, ' ')
         .replace(/\./, ' ')
@@ -29,31 +29,29 @@ function baseLog(level: number, msg: any): void {
             .replace(/\./, ' ')
             .replace(/Z/, 'ms');
         console.log("\x1b[97m", dateString, ":", msg);
-        return
     } else {
         console.log("\x1b[96m", dateString, ":", msg);
-        return
     }
 
 }
 
-function verbose(msg: any) {
+function verbose(msg) {
     return baseLog(VERBOSE, "VERBOSE - " + msg);
 }
 
-function debug(msg: any) {
+function debug(msg) {
     return baseLog(DEBUG, "DEBUG   - " + msg);
 }
 
-function info(msg: any) {
+function info(msg) {
     return baseLog(INFO, "INFO    - " + msg);
 }
 
-function warn(msg: any) {
+function warn(msg) {
     return baseLog(WARN, "WARN    - " + msg);
 }
 
-function error(msg: any) {
+function error(msg) {
     return baseLog(ERROR, "ERROR   - " + msg);
 }
 

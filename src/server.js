@@ -1,27 +1,8 @@
-/**
- # as ss-local:
- # stage 0 SOCKS hello received from local, send hello to local
- # stage 1 addr received from local, query DNS for remote
- # stage 2 UDP assoc
- # stage 3 DNS resolved, connect to remote
- # stage 4 still connecting, more data from local received
- # stage 5 remote connected, piping local and remote
- # as ss-server:
- # stage 0 just jump to stage 1
- # stage 1 addr received from local, query DNS for remote
- # stage 3 DNS resolved, connect to remote
- # stage 4 still connecting, more data from local received
- # stage 5 remote connected, piping local and remote
- **/
-
-
-import Shadow from "./Shadow";
-import {ExpandedConfig} from "./configLib";
-
 const net = require("net");
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
+let {Shadow} = require("./Shadow");
 
 function localSocketListener(config) {
     return function (localSocket) {
@@ -29,11 +10,20 @@ function localSocketListener(config) {
         let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
 
         function clean() {
-            setTimeout(() => {
-                remoteSocket = undefined;
-                localSocket = undefined;
-                shadow = undefined;
-            }, 6000)
+            // setTimeout(() => {
+            //     remoteSocket.end();
+            //     remoteSocket.destroy();
+            //     localSocket.end();
+            //     localSocket.destroy();
+            //     // remoteSocket = undefined;
+            //     // localSocket = undefined;
+            //     // shadow = undefined;
+            // }, 200)
+        }
+
+        function resume() {
+            remoteSocket.resume();
+            localSocket.resume();
         }
 
         localSocket.on("data", function (data) {
@@ -51,42 +41,34 @@ function localSocketListener(config) {
         });
 
         remoteSocket.on("end", function () {
-            shadow.destroy();
             clean();
         });
         remoteSocket.on("error", function (e) {
-            shadow.destroy();
             clean();
         });
         remoteSocket.on("close", function (had_error) {
-            shadow.destroy();
             clean();
         });
         remoteSocket.on("drain", function () {
-            shadow.resume();
+            resume();
         });
         remoteSocket.setTimeout(config.timeout, function () {
-            shadow.destroy();
             clean();
         });
 
         localSocket.on("end", function () {
-            shadow.destroy();
             clean();
         });
         localSocket.on("error", function (e) {
-            shadow.destroy();
             clean();
         });
         localSocket.on("close", function (had_error) {
-            shadow.destroy();
             clean();
         });
         localSocket.on("drain", function () {
-            shadow.resume();
+            resume();
         });
         localSocket.setTimeout(config.timeout, function () {
-            shadow.destroy();
             clean();
         });
     };
@@ -119,12 +101,12 @@ function main() {
     setInterval(() => {
         console.log(process.memoryUsage().rss / 1e6);
         if (process.memoryUsage().rss / 1e6 > 30) {
-            process.exit(0);
+            // process.exit(0);
         }
     }, 6000);
     const pack = require("../package.json");
     console.log("\n", pack.name + " " + pack.version, "\n");
-    const configArr:ExpandedConfig = configLib.getServerExpandedConfigArray();
+    const configArr = configLib.getServerExpandedConfigArray();
     configArr.forEach((config) => {
         log.info("start with : " + JSON.stringify(config));
         createServer(config);

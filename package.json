@@ -15,8 +15,8 @@
         "ssserver": "./bin/ss-server"
     },
     "scripts": {
-        "server": "tsc && node build/server-daemon",
-        "local": "tsc && node build/local"
+        "server": "node src/server",
+        "local": "node src/local"
     },
     "repository": {
         "type": "git",
