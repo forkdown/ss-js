@@ -2,29 +2,12 @@ const net = require("net");
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
-let {Shadow} = require("./Shadow");
+let {Shadow} = require("./shadow");
 
 function localSocketListener(config) {
     return function (localSocket) {
         let remoteSocket = new net.Socket();
         let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
-
-        function clean() {
-            // setTimeout(() => {
-            //     remoteSocket.end();
-            //     remoteSocket.destroy();
-            //     localSocket.end();
-            //     localSocket.destroy();
-            //     // remoteSocket = undefined;
-            //     // localSocket = undefined;
-            //     // shadow = undefined;
-            // }, 200)
-        }
-
-        function resume() {
-            remoteSocket.resume();
-            localSocket.resume();
-        }
 
         localSocket.on("data", function (data) {
             shadow.onLocalData(data);
@@ -41,41 +24,40 @@ function localSocketListener(config) {
         });
 
         remoteSocket.on("end", function () {
-            clean();
+            shadow.onClose();
         });
-        remoteSocket.on("error", function (e) {
-            clean();
+        remoteSocket.on("error", function () {
+            shadow.onClose();
         });
-        remoteSocket.on("close", function (had_error) {
-            clean();
+        remoteSocket.on("close", function () {
+            shadow.onClose();
         });
         remoteSocket.on("drain", function () {
-            resume();
+            shadow.onDrain();
         });
         remoteSocket.setTimeout(config.timeout, function () {
-            clean();
+            shadow.onClose();
         });
 
         localSocket.on("end", function () {
-            clean();
+            shadow.onClose();
         });
-        localSocket.on("error", function (e) {
-            clean();
+        localSocket.on("error", function () {
+            shadow.onClose();
         });
-        localSocket.on("close", function (had_error) {
-            clean();
+        localSocket.on("close", function () {
+            shadow.onClose();
         });
         localSocket.on("drain", function () {
-            resume();
+            shadow.onDrain();
         });
         localSocket.setTimeout(config.timeout, function () {
-            clean();
+            shadow.onClose();
         });
     };
 }
 
 function createServer(config) {
-    log.info("calculating ciphers for port " + config.port);
     // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
     const server = new net.Server();
     server.on("connection", localSocketListener(config));
@@ -99,9 +81,10 @@ function createServer(config) {
 
 function main() {
     setInterval(() => {
-        console.log(process.memoryUsage().rss / 1e6);
+        let memoryUsed = Math.floor(process.memoryUsage().rss / 1e6);
+        log.info("memory used : " + memoryUsed + "MB ");
         if (process.memoryUsage().rss / 1e6 > 30) {
-            // process.exit(0);
+            process.exit(1);
         }
     }, 6000);
     const pack = require("../package.json");

@@ -17,6 +17,18 @@ class Shadow {
         this._isFirst = true;
     }
 
+    onClose() {
+        this._local.end();
+        this._remote.end();
+        this._local.destroy();
+        this._remote.destroy();
+    }
+
+    onDrain() {
+        this._local.resume();
+        this._remote.resume();
+    }
+
     writeToLocal() {
         while (this._dataCacheFromRemote.length) {
             this._local.write(this._dataCacheFromRemote.shift());

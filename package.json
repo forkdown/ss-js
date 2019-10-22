@@ -15,7 +15,7 @@
         "ssserver": "./bin/ss-server"
     },
     "scripts": {
-        "server": "node src/server",
+        "server": "node src/serverDaemon.js",
         "local": "node src/local"
     },
     "repository": {
