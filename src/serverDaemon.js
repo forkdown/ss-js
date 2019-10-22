@@ -1,16 +1,12 @@
-const log = require("./log");
 const {spawn} = require("child_process");
 
 function serverDaemon() {
     let server = spawn("node", ["src/server"]);
-    // server.stdout.on("data", data => {
-    //     console.log(data.toString());
-    // });
     server.stdout.pipe(process.stdout);
     server.on("close", () => {
-        log.error("serverDaemon on close event");
+        console.log("  \n  Server memory used too high, server restarted to release memory");
         server.kill();
-        server = serverDaemon();
+        serverDaemon();
     });
 }
 
