@@ -1,6 +1,7 @@
-"use strict";
-const { spawn } = require("child_process");
+const {spawn} = require("child_process");
+
 let times = 0;
+
 function serverDaemon() {
     let server = spawn("node", ["src/server"]);
     server.stdout.pipe(process.stdout);
@@ -11,6 +12,7 @@ function serverDaemon() {
         serverDaemon();
     });
 }
+
 serverDaemon();
 setInterval(() => {
 }, 60000);
