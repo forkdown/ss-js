@@ -9,14 +9,31 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const net = __importStar(require("net"));
 const net_1 = require("net");
+const shadow_1 = require("./shadow");
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
-const { Shadow } = require("./shadow");
+function addEventListeners(socket, shadow, config) {
+    socket.on("end", function () {
+        shadow.onClose();
+    });
+    socket.on("error", function () {
+        shadow.onClose();
+    });
+    socket.on("close", function () {
+        shadow.onClose();
+    });
+    socket.on("drain", function () {
+        shadow.onDrain();
+    });
+    socket.setTimeout(config.timeout, function () {
+        shadow.onClose();
+    });
+}
 function localSocketListener(config) {
     return function (localSocket) {
         let remoteSocket = new net_1.Socket();
-        let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+        let shadow = new shadow_1.Shadow(config.password, config.method, localSocket, remoteSocket);
         localSocket.on("data", function (data) {
             shadow.onLocalData(data);
             if (!remoteSocket.writable) {
@@ -30,36 +47,8 @@ function localSocketListener(config) {
             shadow.onRemoteData(data);
             shadow.writeToLocal();
         });
-        remoteSocket.on("end", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("error", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("close", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("drain", function () {
-            shadow.onDrain();
-        });
-        remoteSocket.setTimeout(config.timeout, function () {
-            shadow.onClose();
-        });
-        localSocket.on("end", function () {
-            shadow.onClose();
-        });
-        localSocket.on("error", function () {
-            shadow.onClose();
-        });
-        localSocket.on("close", function () {
-            shadow.onClose();
-        });
-        localSocket.on("drain", function () {
-            shadow.onDrain();
-        });
-        localSocket.setTimeout(config.timeout, function () {
-            shadow.onClose();
-        });
+        addEventListeners(remoteSocket, shadow, config);
+        addEventListeners(localSocket, shadow, config);
     };
 }
 function createServer(config) {

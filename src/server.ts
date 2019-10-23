@@ -1,11 +1,29 @@
 import {ExpandedConfig} from "./configLib";
 import * as net from "net";
 import {Socket} from "net";
+import {Shadow} from "./shadow";
 
 const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
-const {Shadow} = require("./shadow");
+
+function addEventListeners(socket: Socket, shadow: Shadow, config: ExpandedConfig) {
+    socket.on("end", function () {
+        shadow.onClose();
+    });
+    socket.on("error", function () {
+        shadow.onClose();
+    });
+    socket.on("close", function () {
+        shadow.onClose();
+    });
+    socket.on("drain", function () {
+        shadow.onDrain();
+    });
+    socket.setTimeout(config.timeout, function () {
+        shadow.onClose();
+    });
+}
 
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
@@ -26,37 +44,9 @@ function localSocketListener(config: ExpandedConfig) {
             shadow.writeToLocal();
         });
 
-        remoteSocket.on("end", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("error", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("close", function () {
-            shadow.onClose();
-        });
-        remoteSocket.on("drain", function () {
-            shadow.onDrain();
-        });
-        remoteSocket.setTimeout(config.timeout, function () {
-            shadow.onClose();
-        });
+        addEventListeners(remoteSocket, shadow, config);
+        addEventListeners(localSocket, shadow, config);
 
-        localSocket.on("end", function () {
-            shadow.onClose();
-        });
-        localSocket.on("error", function () {
-            shadow.onClose();
-        });
-        localSocket.on("close", function () {
-            shadow.onClose();
-        });
-        localSocket.on("drain", function () {
-            shadow.onDrain();
-        });
-        localSocket.setTimeout(config.timeout, function () {
-            shadow.onClose();
-        });
     };
 }
 
