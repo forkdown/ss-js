@@ -3,8 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const net_1 = require("net");
 const log = require("./log");
 const { Encryptor } = require("./encrypt");
-const utils = require("./utils");
-const inet = require("./inet");
+const ipBuffer = require("./ipBuffer");
 class Shadow {
     constructor(password, method, localSocket, remoteSocket) {
         this.error = false;
@@ -82,12 +81,12 @@ class Shadow {
             this.headerLength = 2 + addrLen + 2;
         }
         if (addrType === 1) {
-            this.remoteAddr = utils.inetNtoa(dataDecrypted.slice(1, 5));
+            this.remoteAddr = ipBuffer.ipBufferToString(dataDecrypted.slice(1, 5));
             this.remotePort = dataDecrypted.readUInt16BE(5);
             this.headerLength = 1 + 4 + 2;
         }
         if (addrType === 4) {
-            this.remoteAddr = inet.inet_ntop(dataDecrypted.slice(1, 17));
+            this.remoteAddr = ipBuffer.ipBufferToString(dataDecrypted.slice(1, 17));
             this.remotePort = dataDecrypted.readUInt16BE(17);
             this.headerLength = 1 + 16 + 2;
         }
