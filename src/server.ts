@@ -7,6 +7,8 @@ const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
 
+const memoryThread = 300;
+
 function addEventListeners(socket: Socket, shadow: Shadow, config: ExpandedConfig) {
     socket.on("end", function () {
         shadow.onClose();
@@ -76,7 +78,7 @@ function main() {
     setInterval(() => {
         let memoryUsed = Math.floor(process.memoryUsage().rss / 1e6);
         log.info("memory used : " + memoryUsed + "MB ");
-        if (process.memoryUsage().rss / 1e6 > 300) {
+        if (process.memoryUsage().rss / 1e6 > memoryThread) {
             // process.exit(1);
         }
     }, 6000);
