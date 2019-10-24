@@ -1,13 +1,16 @@
-var EVP_BytesToKey, Encryptor, bytes_to_key_results, cachedTables, create_rc4_md5_cipher, crypto, encryptAll, getTable,
-    int32Max, merge_sort, method_supported, substitute, util;
+var Encryptor, bytes_to_key_results, cachedTables, crypto,
+    int32Max, merge_sort, method_supported, util;
 
 crypto = require("crypto");
 util = require("util");
 merge_sort = require("./merge_sort").merge_sort;
+
 int32Max = Math.pow(2, 32);
 cachedTables = {};
-getTable = function (key) {
+
+function getTable(key) {
     var ah, al, decrypt_table, hash, i, md5sum, result, table;
+
     if (cachedTables[key]) {
         return cachedTables[key];
     }
@@ -39,9 +42,9 @@ getTable = function (key) {
     result = [table, decrypt_table];
     cachedTables[key] = result;
     return result;
-};
+}
 
-substitute = function (table, buf) {
+function substitute(table, buf) {
     var i;
     i = 0;
     while (i < buf.length) {
@@ -49,10 +52,11 @@ substitute = function (table, buf) {
         i++;
     }
     return buf;
-};
+}
 
 bytes_to_key_results = {};
-EVP_BytesToKey = function (password, key_len, iv_len) {
+
+function EVP_BytesToKey(password, key_len, iv_len) {
     var count, d, data, i, iv, key, m, md5, ms;
     if (bytes_to_key_results["" + password + ":" + key_len + ":" + iv_len]) {
         return bytes_to_key_results["" + password + ":" + key_len + ":" + iv_len];
@@ -77,7 +81,7 @@ EVP_BytesToKey = function (password, key_len, iv_len) {
     iv = ms.slice(key_len, key_len + iv_len);
     bytes_to_key_results[password] = [key, iv];
     return [key, iv];
-};
+}
 
 method_supported = {
     'aes-128-cfb': [16, 16],
@@ -96,7 +100,7 @@ method_supported = {
     'seed-cfb': [16, 16]
 };
 
-create_rc4_md5_cipher = function (key, iv, op) {
+function create_rc4_md5_cipher(key, iv, op) {
     var md5, rc4_key;
     md5 = crypto.createHash('md5');
     md5.update(key);
@@ -195,7 +199,7 @@ Encryptor = (function () {
 
 })();
 
-encryptAll = function (password, method, op, data) {
+function encryptAll(password, method, op, data) {
     var cipher, decryptTable, encryptTable, iv, ivLen, iv_, key, keyLen, result, _ref, _ref1, _ref2;
     if (method === 'table') {
         method = null;
@@ -233,7 +237,7 @@ encryptAll = function (password, method, op, data) {
         result.push(cipher.final());
         return Buffer.concat(result);
     }
-};
+}
 
 exports.Encryptor = Encryptor;
 exports.getTable = getTable;

@@ -15,6 +15,7 @@
         "ssserver": "src/bin/ss-server"
     },
     "scripts": {
+        "test": "tsc && node src/encryptorTest",
         "server": "tsc && node src/server",
         "local": "tsc && node src/local"
     },
@@ -23,6 +24,7 @@
         "url": "https://github.com/qieru/ss-js"
     },
     "dependencies": {
-        "@types/node": "^12.11.1"
+        "@types/node": "^12.11.1",
+        "futoin-hkdf": "^1.2.1"
     }
 }
