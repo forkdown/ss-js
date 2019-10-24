@@ -29,7 +29,7 @@ function decrypt(masterKey, encrypted) {
     decipher.final();
     return s;
 }
-let key = '751f621ea5c8f9302624750004598718';
+let key = 'evenardo';
 let data = "Hello, nodejs.和java程序进行交互的时候，java那边使用AES 128位填充模式：AES/CBC/PKCS5Padding加密方法，在nodejs中采用" +
     "对应的aes-128-cbc加密方法就能对应上，因为有使用向量（iv），所以nodejs中要用createCipheriv方法，而不是createCipher。";
 for (let i = 0; i < 9; i++) {
@@ -38,12 +38,6 @@ for (let i = 0; i < 9; i++) {
 console.time("start");
 let encrypted = encrypt(key, data);
 let dec = decrypt(key, encrypted);
-console.timeEnd("start");
 console.log(data === dec);
-// console.log("");
-// console.log("需要加密的数据:", data);
-// console.log("");
-// console.log("数据加密后:", encrypted);
-// console.log("");
-// console.log("数据解密后:", dec);
+console.timeEnd("start");
 //# sourceMappingURL=encryptorTest.js.map
