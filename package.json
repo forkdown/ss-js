@@ -15,9 +15,9 @@
         "ssserver": "tsSrc/bin/ss-server"
     },
     "scripts": {
-        "test": "tsc && node tsSrc/encryptorTest",
-        "server": "tsc && node tsSrc/server",
-        "local": "tsc && node tsSrc/local"
+        "test": "tsc && node tsBuild/encryptorTest",
+        "server": "tsc && node tsBuild/server",
+        "local": "tsc && node tsBuild/local"
     },
     "repository": {
         "type": "git",
