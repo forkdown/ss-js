@@ -1,34 +1,35 @@
 {
-    "name": "shadowsocks",
-    "description": "a tunnel proxy that help you get through firewalls",
-    "keywords": [
-        "shadowsocks",
-        "proxy",
-        "socks5"
-    ],
-    "author": "clowwindy",
-    "version": "2.0.1",
-    "license": "MIT",
-    "main": "build/server.js",
-    "bin": {
-        "sslocal": "src/bin/ss-local",
-        "ssserver": "src/bin/ss-server"
-    },
-    "scripts": {
-        "test": "ts-node src/encryptorTest",
-        "server": "ts-node src/server",
-        "local": "ts-node  src/local"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/qieru/ss-js"
-    },
-    "dependencies": {
-        "futoin-hkdf": "^1.2.1"
-    },
-    "devDependencies": {
-        "@types/node": "^12.11.1",
-        "typescript": "^3.6.4",
-        "ts-node": "^8.4.1"
-    }
+  "name": "shadowsocks",
+  "description": "a tunnel proxy that help you get through firewalls",
+  "keywords": [
+    "shadowsocks",
+    "proxy",
+    "socks5"
+  ],
+  "author": "clowwindy",
+  "version": "2.0.1",
+  "license": "MIT",
+  "main": "build/server.js",
+  "bin": {
+    "sslocal": "src/bin/ss-local",
+    "ssserver": "src/bin/ss-server"
+  },
+  "scripts": {
+    "test": "ts-node src/encryptorTest",
+    "server": "tsc && node lib/server",
+    "serverDaemon": "tsc && node lib/serverDaemon",
+    "local": "ts-node  src/local"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qieru/ss-js"
+  },
+  "dependencies": {
+    "futoin-hkdf": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^12.11.1",
+    "typescript": "^3.6.4",
+    "ts-node": "^8.4.1"
+  }
 }
