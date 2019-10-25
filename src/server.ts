@@ -1,9 +1,9 @@
-import {ExpandedConfig} from "./core/configLib";
+import {ExpandedConfig} from "./configLib";
 import * as net from "net";
 import {Socket} from "net";
-import {Shadow} from "./core/shadow";
+import {Shadow} from "./shadow";
 
-const configLib = require("./core/configLib");
+const configLib = require("./configLib");
 const udpRelay = require("./udprelay");
 const log = require("./log");
 
