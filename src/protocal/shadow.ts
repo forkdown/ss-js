@@ -1,8 +1,8 @@
 import {Socket} from "net";
 
-const log = require("./log");
+const log = require("../common/log");
 const {Encryptor} = require("./encrypt");
-const ipBuffer = require("./ipBuffer");
+const ip = require("../common/ip");
 
 export class Shadow {
     public error = false;
@@ -90,12 +90,12 @@ export class Shadow {
             this.headerLength = 2 + addrLen + 2;
         }
         if (addrType === 1) {
-            this.remoteAddr = ipBuffer.ipBufferToString(dataDecrypted.slice(1, 5));
+            this.remoteAddr = ip.ipBufferToString(dataDecrypted.slice(1, 5));
             this.remotePort = dataDecrypted.readUInt16BE(5);
             this.headerLength = 1 + 4 + 2;
         }
         if (addrType === 4) {
-            this.remoteAddr = ipBuffer.ipBufferToString(dataDecrypted.slice(1, 17));
+            this.remoteAddr = ip.ipBufferToString(dataDecrypted.slice(1, 17));
             this.remotePort = dataDecrypted.readUInt16BE(17);
             this.headerLength = 1 + 16 + 2;
         }

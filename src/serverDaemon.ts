@@ -3,7 +3,7 @@ const {spawn} = require("child_process");
 let times = 0;
 
 function serverDaemon() {
-    let server = spawn("node", ["lib/server"]);
+    let server = spawn("node", ["build/server"]);
     server.stdout.pipe(process.stdout);
     server.on("close", () => {
         times++;

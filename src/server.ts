@@ -1,11 +1,11 @@
-import {ExpandedConfig} from "./configLib";
+import {ExpandedConfig} from "./common/configJson";
 import * as net from "net";
 import {Socket} from "net";
-import {Shadow} from "./shadow";
+import {Shadow} from "./protocal/shadow";
 
-const configLib = require("./configLib");
-const udpRelay = require("./udprelay");
-const log = require("./log");
+const configLib = require("./common/configJson");
+const udpRelay = require("./protocal/udprelay");
+const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 300;
 

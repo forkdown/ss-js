@@ -15,10 +15,10 @@
     "ssserver": "src/bin/ss-server"
   },
   "scripts": {
-    "test": "ts-node src/encryptorTest",
-    "server": "tsc && node lib/server",
-    "serverDaemon": "tsc && node lib/serverDaemon",
-    "local": "ts-node  src/local"
+    "test": "tsc && node build/encryptorTest",
+    "server": "tsc && node build/server",
+    "serverDaemon": "tsc && node build/serverDaemon",
+    "local": "tsc && node  build/local"
   },
   "repository": {
     "type": "git",
