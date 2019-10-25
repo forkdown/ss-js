@@ -15,16 +15,20 @@
         "ssserver": "tsSrc/bin/ss-server"
     },
     "scripts": {
-        "test": "tsc && node tsBuild/encryptorTest",
-        "server": "tsc && node tsBuild/server",
-        "local": "tsc && node tsBuild/local"
+        "test": "ts-node tsSrc/encryptorTest",
+        "server": "ts-node tsSrc/server",
+        "local": "ts-node && node tsSrc/local"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/qieru/ss-js"
     },
     "dependencies": {
-        "@types/node": "^12.11.1",
         "futoin-hkdf": "^1.2.1"
+    },
+    "devDependencies": {
+        "@types/node": "^12.11.1",
+        "typescript": "^3.6.4",
+        "ts-node": "^8.4.1"
     }
 }
