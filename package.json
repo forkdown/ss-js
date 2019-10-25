@@ -11,13 +11,13 @@
     "license": "MIT",
     "main": "build/server.js",
     "bin": {
-        "sslocal": "tsSrc/bin/ss-local",
-        "ssserver": "tsSrc/bin/ss-server"
+        "sslocal": "src/bin/ss-local",
+        "ssserver": "src/bin/ss-server"
     },
     "scripts": {
-        "test": "ts-node tsSrc/encryptorTest",
-        "server": "ts-node tsSrc/server",
-        "local": "ts-node && node tsSrc/local"
+        "test": "ts-node src/encryptorTest",
+        "server": "ts-node src/server",
+        "local": "ts-node && node src/local"
     },
     "repository": {
         "type": "git",

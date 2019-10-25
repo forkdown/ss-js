@@ -1,6 +1,6 @@
 {
     "include": [
-        "tsSrc/**/*"
+        "src/**/*"
     ],
     "compilerOptions": {
         /* Basic Options */
