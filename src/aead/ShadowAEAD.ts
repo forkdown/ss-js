@@ -127,7 +127,7 @@ export class ShadowAEAD {
                 this.parseData(bufferFlow.result);
             }
         } catch (e) {
-            log.error("connection on data error " + e);
+            log.error("local connection on data error " + e);
             this.error = true;
         }
     }
@@ -144,7 +144,7 @@ export class ShadowAEAD {
             }
 
         } catch (e) {
-            log.error("connection on data error " + e);
+            log.error("remote connection on data error " + e);
             this.error = true;
         }
     }
