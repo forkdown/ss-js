@@ -58,6 +58,8 @@ export class Shadow {
     }
 
     public onDataRemote(data: Buffer) {
+        let s = data.toString("hex");
+        console.log("hexRemote", s);
         try {
             let dataEncrypted = this.encryptor.encrypt(data);
             this.encryptDataFromRemoteAndPush(dataEncrypted);

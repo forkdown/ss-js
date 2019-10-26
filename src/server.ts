@@ -30,6 +30,7 @@ function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
         let remoteSocket = new Socket();
         let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
+        // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
 
         localSocket.on("data", function (data) {
             shadow.onDataLocal(data);

@@ -4,6 +4,8 @@ import hkdf from "futoin-hkdf";
 const log = require("../common/log");
 const ipBuffer = require("../common/ip");
 import crypto = require('crypto');
+import {BufferFlow} from "../interface/BufferFlow";
+import {Shadow} from "../protocol/shadow";
 
 export class ShadowAEAD {
     public error = false;
@@ -18,6 +20,11 @@ export class ShadowAEAD {
 
     private headerLength: number = 0;
     private isFirst: boolean = true;
+    private isRemoteFirst: boolean = true;
+    private psk: Buffer = Buffer.from("a218ba5edad3d9f2d45d479d7d12a1dcdfa5df372bcedbd53aa0528e23919d79", "hex");
+    private salt: Buffer = Buffer.alloc(32);
+    private nonceNumber: number = 0;
+    private nonceBuffer: Buffer = Buffer.alloc(12);
 
     constructor(password: string, method: string, localSocket: Socket, remoteSocket: Socket) {
         this.localSocket = localSocket;
@@ -48,41 +55,51 @@ export class ShadowAEAD {
         }
     }
 
+    private static decryptSalt(bufferFlow: BufferFlow): BufferFlow {
+        let result = Buffer.from(bufferFlow.flow.slice(0, 32));
+        let flow = Buffer.from(bufferFlow.flow.slice(32));
+        return {flow, result}
+    }
+
+    private decryptPayload(bufferFlow: BufferFlow): BufferFlow {
+        let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+
+        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+        let payloadLenDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
+
+        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+        let payloadDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
+
+        let payloadLen = bufferFlow.flow.slice(0, 2);
+        let payloadLenTag = bufferFlow.flow.slice(2, 18);
+        payloadLenDecipher.setAuthTag(payloadLenTag);
+        let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
+        payloadLenDecipher.final();
+
+        let payload = bufferFlow.flow.slice(18, 18 + len);
+        let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);
+        payloadDecipher.setAuthTag(payloadTag);
+        let result: Buffer = payloadDecipher.update(payload);
+        payloadDecipher.final();
+
+        let flow: Buffer = Buffer.from(bufferFlow.flow.slice(34 + len));
+        return {flow, result};
+    }
+
     public onDataLocal(data: Buffer) {
         try {
+            let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
-                let psk = Buffer.from("a218ba5edad3d9f2d45d479d7d12a1dcdfa5df372bcedbd53aa0528e23919d79", "hex");
+                bufferFlow = ShadowAEAD.decryptSalt({flow: data, result: null});
+                this.salt = bufferFlow.result;
 
-                let salt = data.slice(0, 32);
-                let payloadLen = data.slice(32, 34);
-                let payloadLenTag = data.slice(34, 50);
-
-                let subKey = hkdf(psk, 32, {salt: salt, info: "ss-subkey", hash: "SHA-1"});
-                let nonce = Buffer.alloc(12);
-
-                let payloadLenDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, nonce);
-                payloadLenDecipher.setAuthTag(payloadLenTag);
-
-                let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
-                payloadLenDecipher.final();
-                console.log(len.toString());
-
-                ///
-                let payload = data.slice(50, 50 + len);
-                let payloadTag = data.slice(50 + len, 66 + len);
-                nonce.writeUInt16LE(1, 0);
-                let payloadDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, nonce);
-                payloadDecipher.setAuthTag(payloadTag);
-
-                let decryptedPayload = payloadDecipher.update(payload);
-                payloadDecipher.final();
-                console.log(decryptedPayload);
-
-                this.parseHeader(decryptedPayload);
-                console.log(this.remoteAddr);
-
+                bufferFlow = this.decryptPayload(bufferFlow);
+                this.parseHeader(bufferFlow.result);
                 this.isFirst = false;
-            } else {
+            }
+            while (bufferFlow.flow.length > 0) {
+                bufferFlow = this.decryptPayload(bufferFlow);
+                this.parseData(bufferFlow.result);
             }
         } catch (e) {
             log.error("connection on data error " + e);
@@ -92,9 +109,28 @@ export class ShadowAEAD {
 
     public onDataRemote(data: Buffer) {
         try {
-            // let dataEncrypted = this.encryptor.encrypt(data);
-            // let dataEncrypted = enc.encrypt("evenardo", data);
-            // this.encryptDataFromRemoteAndPush(dataEncrypted);
+            // if (this.isRemoteFirst) {
+            //     this.dataCacheFromRemote.push(this.salt);
+            //     this.isRemoteFirst = false;
+            // }
+            let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+            let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBuffer);
+            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+            let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBuffer);
+
+            let payload = payloadCipher.update(data);
+            payloadCipher.final();
+            let payloadTag = payloadCipher.getAuthTag();
+
+            let lenBuffer = Buffer.alloc(2);
+            lenBuffer.writeUInt16LE(payload.length, 0);
+            let payloadLen = payloadLenCipher.update(lenBuffer);
+            payloadLenCipher.final();
+            let payloadLenTag = payloadLenCipher.getAuthTag();
+
+            let encryptedData = Buffer.concat([payloadLen, payloadLenTag, payload, payloadTag]);
+            this.dataCacheFromRemote.push(encryptedData)
         } catch (e) {
             log.error("connection on data error " + e);
             this.error = true;
@@ -134,6 +170,10 @@ export class ShadowAEAD {
             this.headerLength = 1 + 16 + 2;
         }
         return
+    }
+
+    private parseData(dataDecrypted: Buffer): void {
+        this.dataCacheFromLocal.push(Buffer.from(dataDecrypted));
     }
 
     private parseFirstData(dataDecrypted: Buffer): void {
