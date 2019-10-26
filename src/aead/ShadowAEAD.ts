@@ -114,6 +114,9 @@ export class ShadowAEAD {
     public onDataLocal(data: Buffer) {
         try {
             log.info("on data local length: " + data.length);
+            if (data.length === 1440) {
+                return;
+            }
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
                 bufferFlow = ShadowAEAD.decryptSalt({flow: data, result: null});
