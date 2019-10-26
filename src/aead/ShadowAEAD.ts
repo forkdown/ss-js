@@ -113,8 +113,8 @@ export class ShadowAEAD {
 
     public onDataLocal(data: Buffer) {
         try {
-            log.info("on data local length: " + data.length);
             if (data.length === 1440) {
+                log.error("on data local length: " + data.length);
                 this.onClose();
                 return;
             }
