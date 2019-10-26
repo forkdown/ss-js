@@ -72,7 +72,6 @@ export class ShadowAEAD {
         this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
         let payloadDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
 
-        log.info("bufferFlow.flow.length: " + bufferFlow.flow.length);
         let payloadLen = bufferFlow.flow.slice(0, 2);
         let payloadLenTag = bufferFlow.flow.slice(2, 18);
         payloadLenDecipher.setAuthTag(payloadLenTag);
@@ -114,6 +113,7 @@ export class ShadowAEAD {
 
     public onDataLocal(data: Buffer) {
         try {
+            log.info("on data local length: " + data.length);
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
                 bufferFlow = ShadowAEAD.decryptSalt({flow: data, result: null});
