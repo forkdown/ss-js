@@ -25,6 +25,8 @@ export class ShadowAEAD {
     private salt: Buffer = Buffer.alloc(32);
     private nonceNumber: number = 0;
     private nonceBuffer: Buffer = Buffer.alloc(12);
+    private nonceNumberRemote: number = 0;
+    private nonceBufferRemote: Buffer = Buffer.alloc(12);
 
     constructor(password: string, method: string, localSocket: Socket, remoteSocket: Socket) {
         this.localSocket = localSocket;
@@ -109,22 +111,24 @@ export class ShadowAEAD {
 
     public onDataRemote(data: Buffer) {
         try {
-            // if (this.isRemoteFirst) {
-            //     this.dataCacheFromRemote.push(this.salt);
-            //     this.isRemoteFirst = false;
-            // }
+            if (this.isRemoteFirst) {
+                this.dataCacheFromRemote.push(this.salt);
+                this.isRemoteFirst = false;
+            }
             let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
-            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-            let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBuffer);
-            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-            let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBuffer);
+
+            this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
+            let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
+            this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
+            let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
+            //////
 
             let payload = payloadCipher.update(data);
             payloadCipher.final();
             let payloadTag = payloadCipher.getAuthTag();
 
             let lenBuffer = Buffer.alloc(2);
-            lenBuffer.writeUInt16LE(payload.length, 0);
+            lenBuffer.writeUInt16BE(payload.length, 0);
             let payloadLen = payloadLenCipher.update(lenBuffer);
             payloadLenCipher.final();
             let payloadLenTag = payloadLenCipher.getAuthTag();
