@@ -88,6 +88,29 @@ export class ShadowAEAD {
         return {flow, result};
     }
 
+    private encryptChunk(bufferSlice: Buffer) {
+        let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+
+        this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
+        let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
+        this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
+        let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
+        //////
+
+        let payload = payloadCipher.update(bufferSlice);
+        payloadCipher.final();
+        let payloadTag = payloadCipher.getAuthTag();
+
+        let lenBuffer = Buffer.alloc(2);
+        lenBuffer.writeUInt16BE(payload.length, 0);
+        let payloadLen = payloadLenCipher.update(lenBuffer);
+        payloadLenCipher.final();
+        let payloadLenTag = payloadLenCipher.getAuthTag();
+
+        let encryptedData = Buffer.concat([payloadLen, payloadLenTag, payload, payloadTag]);
+        this.dataCacheFromRemote.push(encryptedData)
+    }
+
     public onDataLocal(data: Buffer) {
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
@@ -115,26 +138,19 @@ export class ShadowAEAD {
                 this.dataCacheFromRemote.push(this.salt);
                 this.isRemoteFirst = false;
             }
-            let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+            if (data.length > 0x3fff) {
+                console.log(data.length);
+                for (let i = 0; i < data.length + 1; i += 0x3fff) {
+                    if (i + 0x3fff - 0x1 > data.length) {
+                        this.encryptChunk(data.slice(i))
+                    } else {
+                        this.encryptChunk(data.slice(i, i + 0x3fff))
+                    }
+                }
+            } else {
+                this.encryptChunk(data);
+            }
 
-            this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
-            let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
-            this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
-            let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
-            //////
-
-            let payload = payloadCipher.update(data);
-            payloadCipher.final();
-            let payloadTag = payloadCipher.getAuthTag();
-
-            let lenBuffer = Buffer.alloc(2);
-            lenBuffer.writeUInt16BE(payload.length, 0);
-            let payloadLen = payloadLenCipher.update(lenBuffer);
-            payloadLenCipher.final();
-            let payloadLenTag = payloadLenCipher.getAuthTag();
-
-            let encryptedData = Buffer.concat([payloadLen, payloadLenTag, payload, payloadTag]);
-            this.dataCacheFromRemote.push(encryptedData)
         } catch (e) {
             log.error("connection on data error " + e);
             this.error = true;
