@@ -6,7 +6,7 @@ import {ShadowAEAD} from "./aead/ShadowAEAD";
 const configLib = require("./common/configJson");
 const log = require("./common/log");
 
-const MAX_MEMORY_THREAD = 300;
+const MAX_MEMORY_THREAD = 128;
 
 function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: ExpandedConfig) {
     socket.on("end", function () {
