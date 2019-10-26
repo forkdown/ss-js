@@ -72,6 +72,7 @@ export class ShadowAEAD {
         this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
         let payloadDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
 
+        log.info("bufferFlow.flow.length: " + bufferFlow.flow.length);
         let payloadLen = bufferFlow.flow.slice(0, 2);
         let payloadLenTag = bufferFlow.flow.slice(2, 18);
         payloadLenDecipher.setAuthTag(payloadLenTag);
