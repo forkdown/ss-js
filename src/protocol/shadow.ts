@@ -46,7 +46,7 @@ export class Shadow {
         }
     }
 
-    public onLocalData(data: Buffer) {
+    public onDataLocal(data: Buffer) {
         let dataDecrypted = this.encryptor.decrypt(data);
         if (this.isFirst) {
             this.parseHeader(dataDecrypted);
@@ -57,7 +57,7 @@ export class Shadow {
         }
     }
 
-    public onRemoteData(data: Buffer) {
+    public onDataRemote(data: Buffer) {
         try {
             let dataEncrypted = this.encryptor.encrypt(data);
             this.encryptDataFromRemoteAndPush(dataEncrypted);

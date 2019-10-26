@@ -1,10 +1,8 @@
 import {ExpandedConfig} from "./common/configJson";
-import * as net from "net";
-import {Socket} from "net";
-import {Shadow} from "./protocal/shadow";
+import {Server, Socket} from "net";
+import {Shadow} from "./protocol/shadow";
 
 const configLib = require("./common/configJson");
-const udpRelay = require("./protocal/udprelay");
 const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 300;
@@ -33,7 +31,7 @@ function localSocketListener(config: ExpandedConfig) {
         let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
 
         localSocket.on("data", function (data) {
-            shadow.onLocalData(data);
+            shadow.onDataLocal(data);
             if (!remoteSocket.writable) {
                 remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
                     log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
@@ -42,7 +40,7 @@ function localSocketListener(config: ExpandedConfig) {
             shadow.writeToRemote();
         });
         remoteSocket.on("data", function (data) {
-            shadow.onRemoteData(data);
+            shadow.onDataRemote(data);
             shadow.writeToLocal();
         });
 
@@ -53,8 +51,7 @@ function localSocketListener(config: ExpandedConfig) {
 }
 
 function createServer(config: ExpandedConfig) {
-    // udpRelay.createServer(server_ip, port, null, null, password, method, timeout, false);
-    const server = new net.Server();
+    const server = new Server();
     server.on("connection", localSocketListener(config));
     server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {

@@ -19,6 +19,11 @@ function serverDaemon() {
     });
 }
 
-serverDaemon();
-setInterval(() => {
-}, 60000);
+function main() {
+    serverDaemon();
+    setInterval(() => {
+    }, 60000);
+}
+
+main();
+
