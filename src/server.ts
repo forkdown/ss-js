@@ -1,13 +1,14 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
 import {Shadow} from "./protocol/shadow";
+import {ShadowAEAD} from "./aead/ShadowAEAD";
 
 const configLib = require("./common/configJson");
 const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 300;
 
-function addNecessaryListeners(socket: Socket, shadow: Shadow, config: ExpandedConfig) {
+function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: ExpandedConfig) {
     socket.on("end", function () {
         shadow.onClose();
     });
@@ -28,7 +29,7 @@ function addNecessaryListeners(socket: Socket, shadow: Shadow, config: ExpandedC
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
         let remoteSocket = new Socket();
-        let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+        let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
 
         localSocket.on("data", function (data) {
             shadow.onDataLocal(data);
