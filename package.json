@@ -24,6 +24,7 @@
     "url": "https://github.com/qieru/ss-js"
   },
   "dependencies": {
+    "colors": "^1.4.0",
     "futoin-hkdf": "^1.2.1"
   },
   "devDependencies": {

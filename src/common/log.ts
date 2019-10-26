@@ -1,3 +1,4 @@
+const color = require("colors");
 const VERBOSE = 0;
 const DEBUG = 1;
 const INFO = 2;
@@ -20,17 +21,13 @@ function baseLog(level: number, msg: any): void {
         return
     }
     if (level === ERROR) {
-        console.log("\x1b[91m", dateString, ":", msg);
+        console.log(dateString, ":", msg.red,);
         return
     }
     if (level >= DEBUG) {
-        let dateString = new Date().toISOString()
-            .replace(/T/, ' ')
-            .replace(/\./, ' ')
-            .replace(/Z/, 'ms');
-        console.log("\x1b[97m", dateString, ":", msg);
+        console.log(dateString, ":", msg);
     } else {
-        console.log("\x1b[96m", dateString, ":", msg);
+        console.log(dateString, ":", msg);
     }
 
 }
