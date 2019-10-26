@@ -133,7 +133,7 @@ export class ShadowAEAD {
         } catch (e) {
             log.error("local connection on data error " + e);
             log.error("on data local length: " + data.length);
-            this.onClose();
+            // this.onClose();
             this.error = true;
         }
     }
@@ -152,7 +152,7 @@ export class ShadowAEAD {
         } catch (e) {
             log.error("remote connection on data error " + e);
             log.error("on data remote length: " + data.length);
-            this.onClose();
+            // this.onClose();
             this.error = true;
         }
     }
