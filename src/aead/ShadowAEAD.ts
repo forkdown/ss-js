@@ -138,17 +138,9 @@ export class ShadowAEAD {
                 this.dataCacheFromRemote.push(this.salt);
                 this.isRemoteFirst = false;
             }
-            if (data.length > 0x3fff) {
-                console.log(data.length);
-                for (let i = 0; i < data.length + 1; i += 0x3fff) {
-                    if (i + 0x3fff - 0x1 > data.length) {
-                        this.encryptChunk(data.slice(i))
-                    } else {
-                        this.encryptChunk(data.slice(i, i + 0x3fff))
-                    }
-                }
-            } else {
-                this.encryptChunk(data);
+
+            for (let i = 0; i < data.length; i += 0x3fff) {
+                this.encryptChunk(data.slice(i, i + 0x3fff))
             }
 
         } catch (e) {
