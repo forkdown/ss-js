@@ -36,15 +36,13 @@ export class ShadowAEAD {
     }
 
     public onClose() {
-        this.localSocket.end();
         this.localSocket.destroy();
-        this.remoteSocket.end();
         this.remoteSocket.destroy();
     }
 
     public onDrain() {
-        this.localSocket.resume();
-        this.remoteSocket.resume();
+        // this.localSocket.resume();
+        // this.remoteSocket.resume();
     }
 
     public writeToLocal() {
@@ -121,6 +119,7 @@ export class ShadowAEAD {
     public onDataLocal(data: Buffer) {
         try {
             if (data.length === 1428) {
+                this.onClose();
                 return;
             }
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
