@@ -9,7 +9,7 @@ import {BufferFlow} from "../interface/BufferFlow";
 
 // import {Shadow} from "../protocol/shadow";
 
-export class ShadowAEAD {
+export class ChaCha20 {
     public error = false;
     public remoteAddr: string = "";
     public remotePort: number = 0;
@@ -129,7 +129,7 @@ export class ShadowAEAD {
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
-                bufferFlow = ShadowAEAD.decryptSalt({flow: data, result: null});
+                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
                 this.salt = bufferFlow.result;
 
                 bufferFlow = this.decryptPayload(bufferFlow);
