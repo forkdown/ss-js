@@ -1,6 +1,5 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
-import {Shadow} from "./protocol/shadow";
 import {ShadowAEAD} from "./aead/ShadowAEAD";
 
 const configLib = require("./common/configJson");
@@ -18,9 +17,6 @@ function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: Expan
     socket.on("close", function () {
         shadow.onClose();
     });
-    socket.on("drain", function () {
-        shadow.onDrain();
-    });
     socket.setTimeout(config.timeout, function () {
         shadow.onClose();
     });
@@ -28,26 +24,38 @@ function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: Expan
 
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
-        let remoteSocket = new Socket();
-        let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
-        // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+        // let remoteSocket = new Socket();
+        // let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
 
-        localSocket.on("data", function (data) {
-            shadow.onDataLocal(data);
-            if (!remoteSocket.writable) {
-                remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
-                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                });
-            }
-            shadow.writeToRemote();
-        });
-        remoteSocket.on("data", function (data) {
-            shadow.onDataRemote(data);
-            shadow.writeToLocal();
-        });
+        let salt = localSocket.read(32);
 
-        addNecessaryListeners(remoteSocket, shadow, config);
-        addNecessaryListeners(localSocket, shadow, config);
+
+        //
+        // localSocket.on("data", function (data) {
+        //     localSocket.pause();
+        //     shadow.onDataLocal(data);
+        //     if (!remoteSocket.writable) {
+        //         remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
+        //             log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+        //         });
+        //     }
+        //     localSocket.resume();
+        //     shadow.writeToRemote();
+        // });
+        // remoteSocket.on("data", function (data) {
+        //     shadow.onDataRemote(data);
+        //     shadow.writeToLocal();
+        // });
+        //
+        // remoteSocket.on("drain", function () {
+        //     console.log("remote on drain")
+        // });
+        // localSocket.on("drain", function () {
+        //     console.log("local on drain")
+        // });
+        //
+        // addNecessaryListeners(remoteSocket, shadow, config);
+        // addNecessaryListeners(localSocket, shadow, config);
 
     };
 }
