@@ -15,6 +15,7 @@
   },
   "scripts": {
     "test": "tsc && node build/encryptorTest",
+    "start": "npm run server",
     "server": "tsc && node build/server",
     "serverDaemon": "tsc && node build/serverDaemon",
     "local": "tsc && node  build/local"

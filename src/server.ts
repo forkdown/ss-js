@@ -1,62 +1,25 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
-import {ShadowAEAD} from "./aead/ShadowAEAD";
+import {ShadowSocket} from "./aead/ShadowSocket";
 
 const configLib = require("./common/configJson");
 const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 128;
 
-function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: ExpandedConfig) {
-    socket.on("end", function () {
-        shadow.onClose();
-    });
-    socket.on("error", function () {
-        shadow.onClose();
-    });
-    socket.on("close", function () {
-        shadow.onClose();
-    });
-    socket.setTimeout(config.timeout, function () {
-        shadow.onClose();
-    });
-}
-
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
-        // let remoteSocket = new Socket();
-        // let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
-
-        let salt = localSocket.read(32);
-
-
-        //
-        // localSocket.on("data", function (data) {
-        //     localSocket.pause();
-        //     shadow.onDataLocal(data);
-        //     if (!remoteSocket.writable) {
-        //         remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
-        //             log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-        //         });
-        //     }
-        //     localSocket.resume();
-        //     shadow.writeToRemote();
-        // });
-        // remoteSocket.on("data", function (data) {
-        //     shadow.onDataRemote(data);
-        //     shadow.writeToLocal();
-        // });
-        //
-        // remoteSocket.on("drain", function () {
-        //     console.log("remote on drain")
-        // });
-        // localSocket.on("drain", function () {
-        //     console.log("local on drain")
-        // });
-        //
-        // addNecessaryListeners(remoteSocket, shadow, config);
-        // addNecessaryListeners(localSocket, shadow, config);
-
+        let ss = new ShadowSocket(config.password, config.method, localSocket);
+        localSocket.on("readable", () => {
+            try {
+                ss.parseHeader();
+                log.info(ss.remoteAddr + ":" + ss.remotePort);
+                localSocket.destroy();
+            } catch (e) {
+                log.error(e);
+                localSocket.destroy();
+            }
+        })
     };
 }
 
