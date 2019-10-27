@@ -1,7 +1,6 @@
 import {Socket} from "net";
 import hkdf from "futoin-hkdf";
 
-const chacha = require("chacha");
 const log = require("../common/log");
 const ipBuffer = require("../common/ip");
 import crypto = require('crypto');
@@ -70,21 +69,23 @@ export class ShadowAEAD {
         let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
 
         this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-        let payloadLenDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
+        let payloadLenDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
 
         this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-        let payloadDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
+        let payloadDecipher = crypto.createDecipheriv('aes-256-gcm', subKey, this.nonceBuffer);
 
         let payloadLen = bufferFlow.flow.slice(0, 2);
         let payloadLenTag = bufferFlow.flow.slice(2, 18);
         let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
         payloadLenDecipher.setAuthTag(payloadLenTag);
+        payloadLenDecipher.setAutoPadding(true);
         payloadLenDecipher.final();
 
         let payload = bufferFlow.flow.slice(18, 18 + len);
         let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);
         let result: Buffer = payloadDecipher.update(payload);
         payloadDecipher.setAuthTag(payloadTag);
+        payloadDecipher.setAutoPadding(true);
         payloadDecipher.final();
 
         let flow: Buffer = Buffer.from(bufferFlow.flow.slice(34 + len));
@@ -95,9 +96,9 @@ export class ShadowAEAD {
         let subKey = hkdf(this.psk, 32, {salt: this.saltRemote, info: "ss-subkey", hash: "SHA-1"});
 
         this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
-        let payloadLenCipher = chacha.createCipher(subKey, this.nonceBufferRemote);
+        let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
         this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
-        let payloadCipher = chacha.createCipher(subKey, this.nonceBufferRemote);
+        let payloadCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
         //////
 
         let payload = payloadCipher.update(bufferSlice);
