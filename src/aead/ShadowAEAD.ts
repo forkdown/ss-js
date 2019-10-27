@@ -36,8 +36,8 @@ export class ShadowAEAD {
     }
 
     public onClose() {
-        this.localSocket.destroy();
-        this.remoteSocket.destroy();
+        this.localSocket.end();
+        this.remoteSocket.end();
     }
 
     public onDrain() {
