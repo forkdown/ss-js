@@ -121,7 +121,6 @@ export class ShadowAEAD {
     public onDataLocal(data: Buffer) {
         try {
             if (data.length === 1428) {
-                this.onClose();
                 return;
             }
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
