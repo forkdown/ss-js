@@ -1,25 +1,54 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
-import {ShadowSocket} from "./aead/ShadowSocket";
+import {Shadow} from "./protocol/shadow";
+import {ShadowAEAD} from "./aead/ShadowAEAD";
 
 const configLib = require("./common/configJson");
 const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 128;
 
+function addNecessaryListeners(socket: Socket, shadow: ShadowAEAD, config: ExpandedConfig) {
+    socket.on("end", function () {
+        shadow.onClose();
+    });
+    socket.on("error", function () {
+        shadow.onClose();
+    });
+    socket.on("close", function () {
+        shadow.onClose();
+    });
+    socket.on("drain", function () {
+        shadow.onDrain();
+    });
+    socket.setTimeout(config.timeout, function () {
+        shadow.onClose();
+    });
+}
+
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
-        let ss = new ShadowSocket(config.password, config.method, localSocket);
-        localSocket.on("readable", () => {
-            try {
-                ss.parseHeader();
-                log.info(ss.remoteAddr + ":" + ss.remotePort);
-                localSocket.destroy();
-            } catch (e) {
-                log.error(e);
-                localSocket.destroy();
+        let remoteSocket = new Socket();
+        let shadow = new ShadowAEAD(config.password, config.method, localSocket, remoteSocket);
+        // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+
+        localSocket.on("data", function (data) {
+            shadow.onDataLocal(data);
+            if (!remoteSocket.writable) {
+                remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+                });
             }
-        })
+            shadow.writeToRemote();
+        });
+        remoteSocket.on("data", function (data) {
+            shadow.onDataRemote(data);
+            shadow.writeToLocal();
+        });
+
+        addNecessaryListeners(remoteSocket, shadow, config);
+        addNecessaryListeners(localSocket, shadow, config);
+
     };
 }
 
