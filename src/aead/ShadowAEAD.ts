@@ -41,8 +41,10 @@ export class ShadowAEAD {
     }
 
     public onDrain() {
-        // this.localSocket.resume();
-        // this.remoteSocket.resume();
+        this.localSocket.pause();
+        this.localSocket.resume();
+        this.remoteSocket.pause();
+        this.remoteSocket.resume();
     }
 
     public writeToLocal() {
