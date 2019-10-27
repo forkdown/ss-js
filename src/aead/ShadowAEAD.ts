@@ -5,7 +5,8 @@ const log = require("../common/log");
 const ipBuffer = require("../common/ip");
 import crypto = require('crypto');
 import {BufferFlow} from "../interface/BufferFlow";
-import {Shadow} from "../protocol/shadow";
+
+// import {Shadow} from "../protocol/shadow";
 
 export class ShadowAEAD {
     public error = false;
@@ -23,6 +24,7 @@ export class ShadowAEAD {
     private isRemoteFirst: boolean = true;
     private psk: Buffer = Buffer.from("a218ba5edad3d9f2d45d479d7d12a1dcdfa5df372bcedbd53aa0528e23919d79", "hex");
     private salt: Buffer = Buffer.alloc(32);
+    private saltRemote: Buffer = crypto.randomBytes(32);
     private nonceNumber: number = 0;
     private nonceBuffer: Buffer = Buffer.alloc(12);
     private nonceNumberRemote: number = 0;
@@ -74,14 +76,16 @@ export class ShadowAEAD {
 
         let payloadLen = bufferFlow.flow.slice(0, 2);
         let payloadLenTag = bufferFlow.flow.slice(2, 18);
-        payloadLenDecipher.setAuthTag(payloadLenTag);
         let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
+        payloadLenDecipher.setAuthTag(payloadLenTag);
+        payloadLenDecipher.setAutoPadding(true);
         payloadLenDecipher.final();
 
         let payload = bufferFlow.flow.slice(18, 18 + len);
         let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);
-        payloadDecipher.setAuthTag(payloadTag);
         let result: Buffer = payloadDecipher.update(payload);
+        payloadDecipher.setAuthTag(payloadTag);
+        payloadDecipher.setAutoPadding(true);
         payloadDecipher.final();
 
         let flow: Buffer = Buffer.from(bufferFlow.flow.slice(34 + len));
@@ -89,7 +93,7 @@ export class ShadowAEAD {
     }
 
     private encryptChunk(bufferSlice: Buffer) {
-        let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+        let subKey = hkdf(this.psk, 32, {salt: this.saltRemote, info: "ss-subkey", hash: "SHA-1"});
 
         this.nonceBufferRemote.writeUInt16LE(this.nonceNumberRemote++, 0);
         let payloadLenCipher = crypto.createCipheriv('aes-256-gcm', subKey, this.nonceBufferRemote);
@@ -98,7 +102,10 @@ export class ShadowAEAD {
         //////
 
         let payload = payloadCipher.update(bufferSlice);
-        payloadCipher.final();
+        let final = payloadCipher.final();
+        if (final.length > 0) {
+            console.log("final ", final.length);
+        }
         let payloadTag = payloadCipher.getAuthTag();
 
         let lenBuffer = Buffer.alloc(2);
@@ -141,7 +148,7 @@ export class ShadowAEAD {
     public onDataRemote(data: Buffer) {
         try {
             if (this.isRemoteFirst) {
-                this.dataCacheFromRemote.push(this.salt);
+                this.dataCacheFromRemote.push(this.saltRemote);
                 this.isRemoteFirst = false;
             }
 
