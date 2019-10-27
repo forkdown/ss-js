@@ -37,9 +37,9 @@ export class ShadowAEAD {
 
     public onClose() {
         this.localSocket.end();
-        // this.localSocket.destroy();
+        this.localSocket.destroy();
         this.remoteSocket.end();
-        // this.remoteSocket.destroy();
+        this.remoteSocket.destroy();
     }
 
     public onDrain() {
@@ -120,7 +120,7 @@ export class ShadowAEAD {
 
     public onDataLocal(data: Buffer) {
         try {
-            if (data.length === 1440) {
+            if (data.length === 1428) {
                 this.onClose();
                 return;
             }
