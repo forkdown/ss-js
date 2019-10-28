@@ -1,6 +1,5 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
-import {Shadow} from "./protocol/shadow";
 import {ChaCha20} from "./aead/ChaCha20";
 
 const configLib = require("./common/configJson");
@@ -31,6 +30,10 @@ function localSocketListener(config: ExpandedConfig) {
         let remoteSocket = new Socket();
         let shadow = new ChaCha20(config.password, config.method, localSocket, remoteSocket);
         // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+        localSocket.on("readable", () => {
+            shadow.onLocalReadable().then(r => {
+            });
+        });
 
         localSocket.on("data", function (data) {
             shadow.onDataLocal(data);

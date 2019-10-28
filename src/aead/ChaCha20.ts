@@ -1,11 +1,11 @@
 import {Socket} from "net";
 import hkdf from "futoin-hkdf";
+import {BufferFlow} from "../interface/BufferFlow";
 
 const chacha = require("chacha");
 const log = require("../common/log");
 const ipBuffer = require("../common/ip");
 import crypto = require('crypto');
-import {BufferFlow} from "../interface/BufferFlow";
 
 // import {Shadow} from "../protocol/shadow";
 
@@ -23,8 +23,11 @@ export class ChaCha20 {
     private headerLength: number = 0;
     private isFirst: boolean = true;
     private isRemoteFirst: boolean = true;
+
     private psk: Buffer = Buffer.from("a218ba5edad3d9f2d45d479d7d12a1dcdfa5df372bcedbd53aa0528e23919d79", "hex");
     private salt: Buffer = Buffer.alloc(32);
+    private subKey: Buffer = Buffer.alloc(32);
+
     private saltRemote: Buffer = crypto.randomBytes(32);
     private nonceNumber: number = 0;
     private nonceBuffer: Buffer = Buffer.alloc(12);
@@ -34,6 +37,12 @@ export class ChaCha20 {
     constructor(password: string, method: string, localSocket: Socket, remoteSocket: Socket) {
         this.localSocket = localSocket;
         this.remoteSocket = remoteSocket;
+    }
+
+    private static decryptSalt(bufferFlow: BufferFlow): BufferFlow {
+        let result = Buffer.from(bufferFlow.flow.slice(0, 32));
+        let flow = Buffer.from(bufferFlow.flow.slice(32));
+        return {flow, result}
     }
 
     public onClose() {
@@ -60,10 +69,126 @@ export class ChaCha20 {
         }
     }
 
-    private static decryptSalt(bufferFlow: BufferFlow): BufferFlow {
-        let result = Buffer.from(bufferFlow.flow.slice(0, 32));
-        let flow = Buffer.from(bufferFlow.flow.slice(32));
-        return {flow, result}
+    public async onLocalReadable() {
+        await this.readSalt();
+        await this.readHeader();
+    }
+
+    public onDataLocal(data: Buffer) {
+        return;
+        try {
+            let bufferFlow = {flow: data, result: Buffer.alloc(0)};
+            if (this.isFirst) {
+                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
+                this.salt = bufferFlow.result;
+
+                bufferFlow = this.decryptPayload(bufferFlow);
+                this.parseHeader(bufferFlow.result);
+                this.isFirst = false;
+            }
+            while (bufferFlow.flow.length > 0) {
+                bufferFlow = this.decryptPayload(bufferFlow);
+                this.parseData(bufferFlow.result);
+            }
+        } catch (e) {
+            log.error("local connection on data error " + e);
+            log.error("on data local length: " + data.length);
+            this.onClose();
+            this.error = true;
+        }
+
+    }
+
+    public onDataRemote(data: Buffer) {
+        this.localSocket.pause();
+        try {
+            if (this.isRemoteFirst) {
+                this.dataCacheFromRemote.push(this.saltRemote);
+                this.isRemoteFirst = false;
+            }
+
+            for (let i = 0; i < data.length; i += 0x3fff) {
+                this.encryptChunk(data.slice(i, i + 0x3fff))
+            }
+
+        } catch (e) {
+            log.error("remote connection on data error " + e);
+            log.error("on data remote length: " + data.length);
+            this.onClose();
+            this.error = true;
+        }
+        this.localSocket.resume();
+    }
+
+    private async readHeader() {
+        let header = await this.readPayload();
+        this.parseHeader(header);
+        console.log(this.remoteAddr, this.remotePort);
+    }
+
+    private async readSalt() {
+        let salt = await this.readFrom(this.localSocket, 32);
+        if (this.isNull(salt)) {
+            return;
+        }
+        this.salt = <Buffer>salt;
+        this.subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+    }
+
+    private isNull(any: any) {
+        if (!any) {
+            this.localSocket.destroy();
+            this.remoteSocket.destroy();
+            log.error("null then destroy");
+            return true
+        }
+        return false
+    }
+
+    private sleep(waitMS: number = 200) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve();
+            }, waitMS)
+        })
+    }
+
+    private async readFrom(socket: Socket, size: number) {
+        let times = 30;
+        let waitMS = 200;
+        let time = 0;
+        while (socket.readableLength < size) {
+            if (time++ > times) {
+                socket.destroy();
+                let msg = "Retried " + times + " times x " + waitMS + " ms . And not enough data received, socket will be destroy";
+                log.error(msg);
+                return null
+            }
+            await this.sleep(waitMS)
+        }
+        return (socket.read(size));
+    }
+
+    private async readPayload() {
+        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+        let payloadLenDecipher = chacha.createDecipher(this.subKey, this.nonceBuffer);
+
+        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+        let payloadDecipher = chacha.createDecipher(this.subKey, this.nonceBuffer);
+
+        let payloadLen = await this.readFrom(this.localSocket, 2);
+        let payloadLenTag = await this.readFrom(this.localSocket, 16);
+        let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
+        payloadLenDecipher.setAuthTag(payloadLenTag);
+        payloadLenDecipher.final();
+
+        let payload = await this.readFrom(this.localSocket, len);
+        let payloadTag = await this.readFrom(this.localSocket, 16);
+        let result: Buffer = payloadDecipher.update(payload);
+        payloadDecipher.setAuthTag(payloadTag);
+        payloadDecipher.final();
+
+        return result;
     }
 
     private decryptPayload(bufferFlow: BufferFlow): BufferFlow {
@@ -115,60 +240,6 @@ export class ChaCha20 {
 
         let encryptedData = Buffer.concat([payloadLen, payloadLenTag, payload, payloadTag]);
         this.dataCacheFromRemote.push(encryptedData)
-    }
-
-    private sleep() {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve();
-            }, 0)
-        })
-    }
-
-    public onDataLocal(data: Buffer) {
-        try {
-            let bufferFlow = {flow: data, result: Buffer.alloc(0)};
-            if (this.isFirst) {
-                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
-                this.salt = bufferFlow.result;
-
-                bufferFlow = this.decryptPayload(bufferFlow);
-                this.parseHeader(bufferFlow.result);
-                this.isFirst = false;
-            }
-            while (bufferFlow.flow.length > 0) {
-                bufferFlow = this.decryptPayload(bufferFlow);
-                this.parseData(bufferFlow.result);
-            }
-        } catch (e) {
-            log.error("local connection on data error " + e);
-            log.error("on data local length: " + data.length);
-            this.onClose();
-            this.error = true;
-        }
-
-    }
-
-
-    public onDataRemote(data: Buffer) {
-        this.localSocket.pause();
-        try {
-            if (this.isRemoteFirst) {
-                this.dataCacheFromRemote.push(this.saltRemote);
-                this.isRemoteFirst = false;
-            }
-
-            for (let i = 0; i < data.length; i += 0x3fff) {
-                this.encryptChunk(data.slice(i, i + 0x3fff))
-            }
-
-        } catch (e) {
-            log.error("remote connection on data error " + e);
-            log.error("on data remote length: " + data.length);
-            this.onClose();
-            this.error = true;
-        }
-        this.localSocket.resume();
     }
 
     private encryptDataFromRemoteAndPush(encryptedData: Buffer): void {
