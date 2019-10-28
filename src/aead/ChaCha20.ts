@@ -1,11 +1,11 @@
 import {Socket} from "net";
 import hkdf from "futoin-hkdf";
+import {BufferFlow} from "../interface/BufferFlow";
 
 const chacha = require("chacha");
 const log = require("../common/log");
 const ipBuffer = require("../common/ip");
 import crypto = require('crypto');
-import {BufferFlow} from "../interface/BufferFlow";
 
 // import {Shadow} from "../protocol/shadow";
 
@@ -16,6 +16,10 @@ export class ChaCha20 {
 
     private dataCacheFromLocal: any[] = [];
     private dataCacheFromRemote: any[] = [];
+
+
+    private dataCacheFromLocalClip: any[] = [];
+    private noClip: boolean = true;
 
     private localSocket = new Socket();
     private remoteSocket = new Socket();
@@ -34,6 +38,12 @@ export class ChaCha20 {
     constructor(password: string, method: string, localSocket: Socket, remoteSocket: Socket) {
         this.localSocket = localSocket;
         this.remoteSocket = remoteSocket;
+    }
+
+    private static decryptSalt(bufferFlow: BufferFlow): BufferFlow {
+        let result = Buffer.from(bufferFlow.flow.slice(0, 32));
+        let flow = Buffer.from(bufferFlow.flow.slice(32));
+        return {flow, result}
     }
 
     public onClose() {
@@ -60,35 +70,87 @@ export class ChaCha20 {
         }
     }
 
-    private static decryptSalt(bufferFlow: BufferFlow): BufferFlow {
-        let result = Buffer.from(bufferFlow.flow.slice(0, 32));
-        let flow = Buffer.from(bufferFlow.flow.slice(32));
-        return {flow, result}
+    public onDataLocal(data: Buffer) {
+        data = Buffer.concat([...this.dataCacheFromLocalClip, data]);
+        try {
+            let bufferFlow = {flow: data, result: Buffer.alloc(0)};
+            if (this.isFirst) {
+                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
+                this.salt = bufferFlow.result;
+
+                bufferFlow = this.decryptPayload(bufferFlow);
+                this.parseHeader(bufferFlow.result);
+                this.isFirst = false;
+            }
+            while (bufferFlow.flow.length > 0 && this.noClip) {
+                bufferFlow = this.decryptPayload(bufferFlow);
+                if (this.noClip) {
+                    this.parseData(bufferFlow.result);
+                }
+                if (!this.noClip) {
+                    log.error("ha ha clip occur");
+                }
+            }
+        } catch (e) {
+            log.error("local connection on data error " + e);
+            log.error("on data local length: " + data.length);
+            this.onClose();
+            this.error = true;
+        }
+
+    }
+
+    public onDataRemote(data: Buffer) {
+        this.localSocket.pause();
+        try {
+            if (this.isRemoteFirst) {
+                this.dataCacheFromRemote.push(this.saltRemote);
+                this.isRemoteFirst = false;
+            }
+
+            for (let i = 0; i < data.length; i += 0x3fff) {
+                this.encryptChunk(data.slice(i, i + 0x3fff))
+            }
+
+        } catch (e) {
+            log.error("remote connection on data error " + e);
+            log.error("on data remote length: " + data.length);
+            this.onClose();
+            this.error = true;
+        }
+        this.localSocket.resume();
     }
 
     private decryptPayload(bufferFlow: BufferFlow): BufferFlow {
-        let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
+        try {
 
-        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-        let payloadLenDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
+            let subKey = hkdf(this.psk, 32, {salt: this.salt, info: "ss-subkey", hash: "SHA-1"});
 
-        this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
-        let payloadDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
+            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+            let payloadLenDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
 
-        let payloadLen = bufferFlow.flow.slice(0, 2);
-        let payloadLenTag = bufferFlow.flow.slice(2, 18);
-        let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
-        payloadLenDecipher.setAuthTag(payloadLenTag);
-        payloadLenDecipher.final();
+            this.nonceBuffer.writeUInt16LE(this.nonceNumber++, 0);
+            let payloadDecipher = chacha.createDecipher(subKey, this.nonceBuffer);
 
-        let payload = bufferFlow.flow.slice(18, 18 + len);
-        let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);
-        let result: Buffer = payloadDecipher.update(payload);
-        payloadDecipher.setAuthTag(payloadTag);
-        payloadDecipher.final();
+            let payloadLen = bufferFlow.flow.slice(0, 2);
+            let payloadLenTag = bufferFlow.flow.slice(2, 18);
+            let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
+            payloadLenDecipher.setAuthTag(payloadLenTag);
+            payloadLenDecipher.final();
 
-        let flow: Buffer = Buffer.from(bufferFlow.flow.slice(34 + len));
-        return {flow, result};
+            let payload = bufferFlow.flow.slice(18, 18 + len);
+            let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);
+            let result: Buffer = payloadDecipher.update(payload);
+            payloadDecipher.setAuthTag(payloadTag);
+            payloadDecipher.final();
+
+            let flow: Buffer = Buffer.from(bufferFlow.flow.slice(34 + len));
+            return {flow, result};
+        } catch (e) {
+            this.noClip = false;
+            this.dataCacheFromLocalClip.push(bufferFlow.flow);
+            return bufferFlow;
+        }
     }
 
     private encryptChunk(bufferSlice: Buffer) {
@@ -123,52 +185,6 @@ export class ChaCha20 {
                 resolve();
             }, 0)
         })
-    }
-
-    public onDataLocal(data: Buffer) {
-        try {
-            let bufferFlow = {flow: data, result: Buffer.alloc(0)};
-            if (this.isFirst) {
-                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
-                this.salt = bufferFlow.result;
-
-                bufferFlow = this.decryptPayload(bufferFlow);
-                this.parseHeader(bufferFlow.result);
-                this.isFirst = false;
-            }
-            while (bufferFlow.flow.length > 0) {
-                bufferFlow = this.decryptPayload(bufferFlow);
-                this.parseData(bufferFlow.result);
-            }
-        } catch (e) {
-            log.error("local connection on data error " + e);
-            log.error("on data local length: " + data.length);
-            this.onClose();
-            this.error = true;
-        }
-
-    }
-
-
-    public onDataRemote(data: Buffer) {
-        this.localSocket.pause();
-        try {
-            if (this.isRemoteFirst) {
-                this.dataCacheFromRemote.push(this.saltRemote);
-                this.isRemoteFirst = false;
-            }
-
-            for (let i = 0; i < data.length; i += 0x3fff) {
-                this.encryptChunk(data.slice(i, i + 0x3fff))
-            }
-
-        } catch (e) {
-            log.error("remote connection on data error " + e);
-            log.error("on data remote length: " + data.length);
-            this.onClose();
-            this.error = true;
-        }
-        this.localSocket.resume();
     }
 
     private encryptDataFromRemoteAndPush(encryptedData: Buffer): void {
