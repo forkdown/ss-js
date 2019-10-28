@@ -47,14 +47,14 @@ export class ChaCha20 {
     }
 
     public onClose() {
+        this.localSocket.end();
+        this.remoteSocket.end();
         this.localSocket.destroy();
         this.remoteSocket.destroy();
     }
 
     public onDrain() {
-        this.localSocket.pause();
         this.localSocket.resume();
-        this.remoteSocket.pause();
         this.remoteSocket.resume();
     }
 
