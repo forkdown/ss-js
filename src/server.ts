@@ -1,6 +1,5 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
-import {Shadow} from "./protocol/shadow";
 import {ChaCha20} from "./aead/ChaCha20";
 
 const configLib = require("./common/configJson");
