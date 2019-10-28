@@ -17,10 +17,10 @@ function addNecessaryListeners(socket: Socket, shadow: ChaCha20, config: Expande
     socket.on("close", function (err) {
         socket.end()
     });
-    socket.on("drain", function () {
-        socket.end();
-        // shadow.onDrain();
-    });
+    // socket.on("drain", function () {
+    //     socket.end();
+    //     // shadow.onDrain();
+    // });
     socket.setTimeout(config.timeout, function () {
         socket.end()
     });
