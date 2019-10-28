@@ -72,6 +72,7 @@ export class ChaCha20 {
 
     public onDataLocal(data: Buffer) {
         data = Buffer.concat([...this.dataCacheFromLocalClip, data]);
+        this.dataCacheFromLocalClip = [];
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
