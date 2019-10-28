@@ -1,5 +1,6 @@
 import {ExpandedConfig} from "./common/configJson";
 import {Server, Socket} from "net";
+import {Shadow} from "./protocol/shadow";
 import {ChaCha20} from "./aead/ChaCha20";
 
 const configLib = require("./common/configJson");
@@ -7,25 +8,21 @@ const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 128;
 
-function addNecessaryListeners(socket: any | Socket, shadow: any, config: ExpandedConfig) {
+function addNecessaryListeners(socket: Socket, shadow: ChaCha20, config: ExpandedConfig) {
     socket.on("end", function () {
-        shadow = undefined;
-        socket = undefined;
+        shadow.onClose();
     });
     socket.on("error", function () {
-        shadow = undefined;
-        socket = undefined;
+        shadow.onClose();
     });
     socket.on("close", function () {
-        shadow = undefined;
-        socket = undefined;
+        shadow.onClose();
     });
     socket.on("drain", function () {
-        log.error("onDrain");
+        shadow.onDrain();
     });
     socket.setTimeout(config.timeout, function () {
-        shadow = undefined;
-        socket = undefined;
+        shadow.onClose();
     });
 }
 
@@ -33,13 +30,24 @@ function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
         let remoteSocket = new Socket();
         let shadow = new ChaCha20(config.password, config.method, localSocket, remoteSocket);
+        // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
+
+        localSocket.on("data", function (data) {
+            shadow.onDataLocal(data);
+            if (!remoteSocket.writable) {
+                remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
+                });
+            }
+            shadow.writeToRemote();
+        });
+        remoteSocket.on("data", function (data) {
+            shadow.onDataRemote(data);
+            shadow.writeToLocal();
+        });
 
         addNecessaryListeners(remoteSocket, shadow, config);
         addNecessaryListeners(localSocket, shadow, config);
-
-        localSocket.on("readable", async () => {
-            await shadow.takeOver();
-        });
 
     };
 }
@@ -68,7 +76,7 @@ function createServer(config: ExpandedConfig) {
 function main() {
     setInterval(() => {
         let memoryUsed = Math.floor(process.memoryUsage().rss / 1e6);
-        log.info("memory used   : " + memoryUsed + "MB ");
+        log.info("memory used : " + memoryUsed + "MB ");
         if (process.memoryUsage().rss / 1e6 > MAX_MEMORY_THREAD) {
             // process.exit(1);
         }
