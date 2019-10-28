@@ -46,9 +46,38 @@ function localSocketListener(config: ExpandedConfig) {
             shadow.writeToLocal();
         });
 
-        addNecessaryListeners(remoteSocket, shadow, config);
-        addNecessaryListeners(localSocket, shadow, config);
+        remoteSocket.on("end", function () {
+            localSocket.end();
+        });
+        remoteSocket.on("error", function () {
+            localSocket.end();
+        });
+        remoteSocket.on("close", function (err) {
+            localSocket.end()
+        });
+        remoteSocket.on("drain", function () {
+            localSocket.resume();
+        });
+        remoteSocket.setTimeout(config.timeout, function () {
+            remoteSocket.destroy();
+        });
 
+
+        localSocket.on("end", function () {
+            remoteSocket.end();
+        });
+        localSocket.on("error", function () {
+            remoteSocket.end();
+        });
+        localSocket.on("close", function (err) {
+            remoteSocket.end()
+        });
+        localSocket.on("drain", function () {
+            remoteSocket.resume();
+        });
+        localSocket.setTimeout(config.timeout, function () {
+            localSocket.destroy();
+        });
     };
 }
 
