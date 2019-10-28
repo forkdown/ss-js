@@ -89,7 +89,7 @@ export class ChaCha20 {
                     this.parseData(bufferFlow.result);
                 }
                 if (!this.noClip) {
-                    log.error("ha ha clip occur");
+                    log.error("ha ha clip occur size now:" + this.dataCacheFromLocalClip.length);
                 }
             }
         } catch (e) {
