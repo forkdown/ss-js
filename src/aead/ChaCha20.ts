@@ -69,10 +69,12 @@ export class ChaCha20 {
         }
     }
 
+    //todo main
     public async onLocalReadable() {
         await this.readSalt();
         await this.readHeader();
     }
+
 
     public onDataLocal(data: Buffer) {
         return;
@@ -123,7 +125,6 @@ export class ChaCha20 {
     private async readHeader() {
         let header = await this.readPayload();
         this.parseHeader(header);
-        console.log(this.remoteAddr, this.remotePort);
     }
 
     private async readSalt() {

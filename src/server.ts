@@ -29,24 +29,11 @@ function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
         let remoteSocket = new Socket();
         let shadow = new ChaCha20(config.password, config.method, localSocket, remoteSocket);
-        // let shadow = new Shadow(config.password, config.method, localSocket, remoteSocket);
-        localSocket.on("readable", () => {
-            shadow.onLocalReadable().then(r => {
-            });
-        });
-
-        localSocket.on("data", function (data) {
-            shadow.onDataLocal(data);
-            if (!remoteSocket.writable) {
-                remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
-                    log.info("connect " + shadow.remoteAddr + ":" + shadow.remotePort);
-                });
-            }
-            shadow.writeToRemote();
-        });
-        remoteSocket.on("data", function (data) {
-            shadow.onDataRemote(data);
-            shadow.writeToLocal();
+        localSocket.on("readable", async () => {
+            await shadow.onLocalReadable();
+            remoteSocket.connect(shadow.remotePort, shadow.remoteAddr, () => {
+                log.info("connect       : " + shadow.remoteAddr + ":" + shadow.remotePort);
+            })
         });
 
         addNecessaryListeners(remoteSocket, shadow, config);
@@ -79,7 +66,7 @@ function createServer(config: ExpandedConfig) {
 function main() {
     setInterval(() => {
         let memoryUsed = Math.floor(process.memoryUsage().rss / 1e6);
-        log.info("memory used : " + memoryUsed + "MB ");
+        log.info("memory used   : " + memoryUsed + "MB ");
         if (process.memoryUsage().rss / 1e6 > MAX_MEMORY_THREAD) {
             // process.exit(1);
         }
