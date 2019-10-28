@@ -9,19 +9,19 @@ const MAX_MEMORY_THREAD = 128;
 
 function addNecessaryListeners(socket: Socket, shadow: ChaCha20, config: ExpandedConfig) {
     socket.on("end", function () {
-        shadow.onClose();
+        socket.end();
     });
     socket.on("error", function () {
-        shadow.onClose();
+        socket.end();
     });
-    socket.on("close", function () {
-        shadow.onClose();
+    socket.on("close", function (err) {
+        socket.end()
     });
-    socket.on("drain", function () {
-        shadow.onDrain();
-    });
+    // socket.on("drain", function () {
+    //     shadow.onDrain();
+    // });
     socket.setTimeout(config.timeout, function () {
-        shadow.onClose();
+        socket.end()
     });
 }
 

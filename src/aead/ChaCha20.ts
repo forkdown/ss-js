@@ -46,11 +46,11 @@ export class ChaCha20 {
         return {flow, result}
     }
 
-    public onClose() {
+    public close() {
         this.localSocket.end();
         this.remoteSocket.end();
-        this.localSocket.destroy();
-        this.remoteSocket.destroy();
+        // this.localSocket.destroy();
+        // this.remoteSocket.destroy();
     }
 
     public onDrain() {
@@ -72,13 +72,20 @@ export class ChaCha20 {
 
     public onDataLocal(data: Buffer) {
         if (this.dataCacheFromLocalClip.length > 0) {
-            data = Buffer.concat([...this.dataCacheFromLocalClip, data]);
+            let clip = Buffer.concat(this.dataCacheFromLocalClip);
             this.dataCacheFromLocalClip = [];
+            if (clip.length > 0x3fff + 34) {
+                this.close();
+                log.error("clip larger than 0x3fff+34");
+                return;
+            }
+            data = Buffer.concat([clip, data]);
+            this.noClip = true;
         }
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
-                bufferFlow = ChaCha20.decryptSalt({flow: data, result: null});
+                bufferFlow = ChaCha20.decryptSalt(bufferFlow);
                 this.salt = bufferFlow.result;
 
                 bufferFlow = this.decryptPayload(bufferFlow);
@@ -97,14 +104,13 @@ export class ChaCha20 {
         } catch (e) {
             log.error("local connection on data error " + e);
             log.error("on data local length: " + data.length);
-            this.onClose();
+            this.close();
             this.error = true;
         }
 
     }
 
     public onDataRemote(data: Buffer) {
-        this.localSocket.pause();
         try {
             if (this.isRemoteFirst) {
                 this.dataCacheFromRemote.push(this.saltRemote);
@@ -118,10 +124,9 @@ export class ChaCha20 {
         } catch (e) {
             log.error("remote connection on data error " + e);
             log.error("on data remote length: " + data.length);
-            this.onClose();
+            this.close();
             this.error = true;
         }
-        this.localSocket.resume();
     }
 
     private decryptPayload(bufferFlow: BufferFlow): BufferFlow {
