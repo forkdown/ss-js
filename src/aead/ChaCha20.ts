@@ -145,6 +145,11 @@ export class ChaCha20 {
             let len = payloadLenDecipher.update(payloadLen).readUInt16BE(0);
             payloadLenDecipher.setAuthTag(payloadLenTag);
             payloadLenDecipher.final();
+            if (bufferFlow.flow.length < 34 + len) {
+                this.noClip = false;
+                this.dataCacheFromLocalClip.push(bufferFlow.flow);
+                return bufferFlow;
+            }
 
             let payload = bufferFlow.flow.slice(18, 18 + len);
             let payloadTag = bufferFlow.flow.slice(18 + len, 34 + len);

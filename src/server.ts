@@ -7,25 +7,6 @@ const log = require("./common/log");
 
 const MAX_MEMORY_THREAD = 128;
 
-function addNecessaryListeners(socket: Socket, shadow: ChaCha20, config: ExpandedConfig) {
-    socket.on("end", function () {
-        socket.end();
-    });
-    socket.on("error", function () {
-        socket.end();
-    });
-    socket.on("close", function (err) {
-        socket.end()
-    });
-    // socket.on("drain", function () {
-    //     socket.end();
-    //     // shadow.onDrain();
-    // });
-    socket.setTimeout(config.timeout, function () {
-        socket.end()
-    });
-}
-
 function localSocketListener(config: ExpandedConfig) {
     return function (localSocket: Socket) {
         let remoteSocket = new Socket();
