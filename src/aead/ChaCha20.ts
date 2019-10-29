@@ -86,10 +86,9 @@ export class ChaCha20 {
             if (this.dataCacheFromLocalClip.length > 0) {
                 let clip = Buffer.concat(this.dataCacheFromLocalClip);
                 this.dataCacheFromLocalClip = [];
-                data = Buffer.concat([clip, data]);
+                bufferFlow.flow = Buffer.concat([clip, bufferFlow.flow]);
                 this.noClip = true;
             }
-            bufferFlow.flow = data;
             while (bufferFlow.flow.length > 0 && this.noClip) {
                 bufferFlow = this.decryptPayload(bufferFlow);
                 if (this.noClip) {
