@@ -99,13 +99,15 @@ export class ChaCha20 {
                 }
                 if (!this.noClip && data.length > 0x3fff + 34) {
                     log.error("ha ha clip occur size now:" + data.length);
-                    this.close();
+                    this.localSocket.destroy();
+                    this.remoteSocket.end();
                 }
             }
         } catch (e) {
             log.error("local connection on data error " + e);
             log.error("on data local length: " + data.length);
-            this.close();
+            this.localSocket.destroy();
+            this.remoteSocket.end();
             this.error = true;
         }
 
