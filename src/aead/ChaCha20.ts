@@ -117,8 +117,8 @@ export class ChaCha20 {
                 this.isRemoteFirst = false;
             }
 
-            for (let i = 0; i < data.length; i += 0xfff) {
-                this.encryptChunk(data.slice(i, i + 0xfff))
+            for (let i = 0; i < data.length; i += 0xff) {
+                this.encryptChunk(data.slice(i, i + 0xff))
             }
 
         } catch (e) {
