@@ -71,17 +71,8 @@ export class ChaCha20 {
     }
 
     public onDataLocal(data: Buffer) {
-        if (this.dataCacheFromLocalClip.length > 0) {
-            let clip = Buffer.concat(this.dataCacheFromLocalClip);
-            this.dataCacheFromLocalClip = [];
-            // if (clip.length > 0x3fff + 34) {
-            //     this.close();
-            //     log.error("clip larger than 0x3fff+34");
-            //     return;
-            // }
-            data = Buffer.concat([clip, data]);
-            this.noClip = true;
-        }
+
+
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
@@ -92,6 +83,13 @@ export class ChaCha20 {
                 this.parseHeader(bufferFlow.result);
                 this.isFirst = false;
             }
+            if (this.dataCacheFromLocalClip.length > 0) {
+                let clip = Buffer.concat(this.dataCacheFromLocalClip);
+                this.dataCacheFromLocalClip = [];
+                data = Buffer.concat([clip, data]);
+                this.noClip = true;
+            }
+            bufferFlow.flow = data;
             while (bufferFlow.flow.length > 0 && this.noClip) {
                 bufferFlow = this.decryptPayload(bufferFlow);
                 if (this.noClip) {
