@@ -64,6 +64,7 @@ function localSocketListener(config: ExpandedConfig) {
 
 function createServer(config: ExpandedConfig) {
     const server = new Server();
+    server.maxConnections = 65535;
     server.on("connection", localSocketListener(config));
     server.on("error", (e: any) => {
         if (e.code === "EADDRINUSE") {
