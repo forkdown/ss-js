@@ -80,6 +80,11 @@ function createServer(config: ExpandedConfig) {
     server.listen(config.port, config.server_ip, () => {
         log.info("server listening at " + config.server_ip + ":" + config.port + " ");
     });
+    setInterval(() => {
+        server.getConnections((error, count) => {
+            log.info("server connections " + count)
+        })
+    }, 1000);
 }
 
 
