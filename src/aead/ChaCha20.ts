@@ -98,7 +98,7 @@ export class ChaCha20 {
                     this.parseData(bufferFlow.result);
                 }
                 if (!this.noClip) {
-                    log.error("ha ha clip occur size now:" + this.dataCacheFromLocalClip.length);
+                    log.error("ha ha clip occur size now:" + data.length);
                 }
             }
         } catch (e) {
@@ -118,9 +118,6 @@ export class ChaCha20 {
             }
 
             for (let i = 0; i < data.length; i += 0x3fff) {
-                if (!this.noClip) {
-                    console.log("!noClip data.length:", data.length);
-                }
                 this.encryptChunk(data.slice(i, i + 0x3fff))
             }
 
