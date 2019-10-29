@@ -79,9 +79,7 @@ export class ChaCha20 {
 
                 bufferFlow = this.decryptPayload(bufferFlow);
                 this.parseHeader(bufferFlow.result);
-                this.dataCacheFromLocalClip.push(bufferFlow.flow);
                 this.isFirst = false;
-                return;
             }
             if (this.dataCacheFromLocalClip.length > 0) {
                 let clip = Buffer.concat(this.dataCacheFromLocalClip);
