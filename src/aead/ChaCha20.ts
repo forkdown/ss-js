@@ -71,8 +71,6 @@ export class ChaCha20 {
     }
 
     public onDataLocal(data: Buffer) {
-
-
         try {
             let bufferFlow = {flow: data, result: Buffer.alloc(0)};
             if (this.isFirst) {
@@ -81,7 +79,9 @@ export class ChaCha20 {
 
                 bufferFlow = this.decryptPayload(bufferFlow);
                 this.parseHeader(bufferFlow.result);
+                this.dataCacheFromLocalClip.push(bufferFlow.flow);
                 this.isFirst = false;
+                return;
             }
             if (this.dataCacheFromLocalClip.length > 0) {
                 let clip = Buffer.concat(this.dataCacheFromLocalClip);
